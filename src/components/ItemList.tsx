@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { CategoryCombobox } from "./CategoryCombobox";
-import { collection, onSnapshot, deleteDoc, doc, updateDoc, addDoc } from "firebase/firestore";
+import { collection, onSnapshot, deleteDoc, doc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { IconPencil, IconTrash, IconSettings, IconX } from "@tabler/icons-react";
 import { Item } from "../types/item";
@@ -19,6 +19,8 @@ import {
   Text,
   Transition,
 } from "@mantine/core";
+import { ItemCard } from './ItemCard';
+import { getColorForCategory } from '../utils/colorUtils';
 
 const ItemList: React.FC = () => {
   const [items, setItems] = useState<Item[]>([]);
@@ -30,19 +32,34 @@ const ItemList: React.FC = () => {
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [categoryColorMap] = useState(new Map<string, string>());
 
   useEffect(() => {
     const q = collection(db, "items");
     const unsubscribe = onSnapshot(q, (QuerySnapshot) => {
       const itemsArr: Item[] = [];
       QuerySnapshot.forEach((doc) => {
-        itemsArr.push({ ...(doc.data() as Item), id: doc.id });
+        const item = doc.data() as Omit<Item, 'id'>;
+        const categories = Array.isArray(item.categories)
+            ? item.categories.map(category => {
+              if (typeof category === 'string') {
+                return { name: category, color: getColorForCategory(category, categoryColorMap) };
+              }
+              return category;
+            })
+            : [];
+
+        itemsArr.push({
+          ...item,
+          id: doc.id,
+          categories: categories,
+        });
       });
       setItems(itemsArr);
       setLoading(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [categoryColorMap]);
 
   const deleteItem = async (id: string) => {
     try {
@@ -73,19 +90,19 @@ const ItemList: React.FC = () => {
 
   const handleAddCategory = (category: string) => {
     if (category && typeof category === 'string') {
+      const color = getColorForCategory(category, categoryColorMap);
       setEditedItem({
         ...editedItem,
-        categories: Array.isArray(editedItem.categories)
-            ? [...editedItem.categories, category]
-            : [category],
+        categories: [
+          ...editedItem.categories,
+          { name: category, color: color }
+        ],
       });
     }
   };
 
   const handleRemoveBadge = (index: number) => {
-    const updatedCategories = Array.isArray(editedItem.categories)
-        ? [...editedItem.categories]
-        : [];
+    const updatedCategories = [...editedItem.categories];
     updatedCategories.splice(index, 1);
     setEditedItem({ ...editedItem, categories: updatedCategories });
   };
@@ -159,7 +176,7 @@ const ItemList: React.FC = () => {
             </Grid.Col>
             <Grid.Col span={12}>
               <Text className="text-white mb-2">Categories:</Text>
-              <CategoryCombobox onCategorySelect={handleAddCategory} />
+              <CategoryCombobox onCategorySelect={handleAddCategory} categoryColorMap={categoryColorMap} />
             </Grid.Col>
             <Grid.Col span={12}>
               <div className="flex flex-wrap gap-2">

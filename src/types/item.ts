@@ -1,6 +1,6 @@
 export interface Item {
-    id?: string;
+    id: string;
     name: string;
     amount: string;
-    categories?: string[];
+    categories: Array<{ name: string; color: string }>;
 }
