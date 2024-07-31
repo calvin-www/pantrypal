@@ -1,7 +1,10 @@
-import { useState } from 'react';
-import { TextInput, NumberInput, Button, Combobox, InputBase, useCombobox, Divider } from '@mantine/core';
+import React, { useState } from 'react';
+import { TextInput, NumberInput, Button, Badge, Notification } from '@mantine/core';
+import { IconX } from '@tabler/icons-react';
 import { addDoc, collection } from 'firebase/firestore';
 import { db } from '../firebase';
+import { CategoryCombobox } from './CategoryCombobox';
+import { getColorForCategory } from '@/src/utils/colorUtils';
 
 interface InputFormProps {
     onAdd: () => void;
@@ -10,28 +13,21 @@ interface InputFormProps {
 const InputForm: React.FC<InputFormProps> = ({ onAdd }) => {
     const [name, setName] = useState('');
     const [amount, setAmount] = useState('');
-    const [categories, setCategories] = useState<string[]>([]);
-    const [search, setSearch] = useState('');
-
-    const itemCategories = [
-        { label: 'Food', options: ['🍎 Fruits', '🥕 Vegetables', '🍗 Meat'] },
-        { label: 'Electronics', options: ['💻 Computers', '📱 Phones', '🔌 Accessories'] },
-        { label: 'Home', options: ['🛋️ Furniture', '🧼 Cleaning', '🏺 Decor'] },
-    ];
-
-    const allOptions = itemCategories.reduce<string[]>((acc, group) => [...acc, ...group.options], []);
-
-    const combobox = useCombobox({
-        onDropdownClose: () => combobox.resetSelectedOption(),
-    });
+    const [categories, setCategories] = useState<{ name: string; color: string }[]>([]);
+    const [showNotification, setShowNotification] = useState(false);
+    const [categoryColorMap] = useState(new Map<string, string>());
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!name.trim() || !amount.trim()) {
+            setShowNotification(true);
+            return;
+        }
         try {
             await addDoc(collection(db, "items"), {
                 name: name.trim(),
                 amount: parseFloat(amount),
-                categories: categories,
+                categories: categories.map(cat => ({ name: cat.name, color: cat.color })),
             });
             setName('');
             setAmount('');
@@ -42,135 +38,67 @@ const InputForm: React.FC<InputFormProps> = ({ onAdd }) => {
         }
     };
 
-    const shouldFilterOptions = allOptions.every((item) => item !== search);
-    const filteredGroups = itemCategories.map((group) => {
-        const filteredOptions = shouldFilterOptions
-            ? group.options.filter((item) => item.toLowerCase().includes(search.toLowerCase().trim()))
-            : group.options;
+    const handleAddCategory = (category: string, color: string) => {
+        setCategories((current) => [...current, { name: category, color }]);
+    };
 
-        return { ...group, options: filteredOptions };
-    });
-
-    const groups = [
-        ...filteredGroups.map((group) => {
-            const options = group.options.map((item) => (
-                <Combobox.Option value={item} key={item}>
-                    {item}
-                </Combobox.Option>
-            ));
-
-            return (
-                <Combobox.Group label={group.label} key={group.label}>
-                    {options}
-                </Combobox.Group>
-            );
-        }),
-        <Combobox.Group label="New Category" key="new-category">
-            <Combobox.Option value={search.trim() || 'start typing'}>
-                &ldquo;{search.trim() || 'start typing'}&rdquo;
-            </Combobox.Option>
-        </Combobox.Group>
-    ];
+    const handleRemoveCategory = (categoryToRemove: string) => {
+        setCategories(categories.filter((category) => category.name !== categoryToRemove));
+    };
 
     return (
         <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
+            {showNotification && (
+                <Notification
+                    className="text-white bg-[#242424] border-2 border-[#3b3b3b]"
+                    withCloseButton={true}
+                    onClose={() => setShowNotification(false)}
+                    withBorder
+                    color="red"
+                    radius="md"
+                    title="Please enter a valid Name and Amount"
+                />
+            )}
             <TextInput
                 value={name}
+                withAsterisk
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Item name"
-                className="text-white bg-[#242424] border-2 border-[#3b3b3b]"
-                styles={{
-                    input: {
-                        backgroundColor: '#242424',
-                        color: 'white',
-                        '&::placeholder': { color: 'rgba(255, 255, 255, 0.5)' },
-                    },
-                }}
+                styles={{input: {backgroundColor: "#242424", color: "white"}}}
             />
 
             <NumberInput
-                value={amount}
-                onChange={(value) => setAmount(value?.toString() || '')}
+                value={amount === "" ? "" : parseFloat(amount)}
+                withAsterisk
+                onChange={(value) => setAmount(value === "" ? "" : value.toString())}
                 placeholder="Amount"
-                className="text-white bg-[#242424] border-2 border-[#3b3b3b]"
-                styles={{
-                    input: {
-                        backgroundColor: '#242424',
-                        color: 'white',
-                        '&::placeholder': { color: 'rgba(255, 255, 255, 0.5)' },
-                    },
-                }}
+                styles={{input: {backgroundColor: "#242424", color: "white"}}}
             />
 
-            <Combobox
-                store={combobox}
-                onOptionSubmit={(val) => {
-                    setCategories((current) => [...current, val]);
-                    setSearch('');
-                    combobox.closeDropdown();
-                }}
-                styles={{
-                    dropdown: {
-                        backgroundColor: '#1a1a1a',
-                        border: '1px solid #3b3b3b',
-                    },
-                    option: {
-                        '&[data-selected]': {
-                            backgroundColor: '#2c2c2c',
-                        },
-                        '&[data-hovered]': {
-                            backgroundColor: '#2c2c2c',
-                        },
-                    },
-                }}
-            >
-                <Combobox.Target>
-                    <InputBase
-                        rightSection={<Combobox.Chevron />}
-                        value={search}
-                        onChange={(event) => {
-                            combobox.openDropdown();
-                            combobox.updateSelectedOptionIndex();
-                            setSearch(event.currentTarget.value);
-                        }}
-                        onClick={() => combobox.openDropdown()}
-                        onFocus={() => combobox.openDropdown()}
-                        onBlur={() => {
-                            combobox.closeDropdown();
-                            setSearch('');
-                        }}
-                        placeholder="Select categories"
-                        rightSectionPointerEvents="none"
-                        className="text-white bg-[#242424] border-2 border-[#3b3b3b]"
-                        styles={{
-                            input: {
-                                color: 'white',
-                                backgroundColor: '#242424',
-                                '&::placeholder': { color: 'rgba(255, 255, 255, 0.5)' },
-                            },
-                        }}
-                    />
-                </Combobox.Target>
-
-                <Combobox.Dropdown>
-                    <Combobox.Options>
-                        {groups}
-                    </Combobox.Options>
-                </Combobox.Dropdown>
-            </Combobox>
+            <CategoryCombobox onCategorySelect={handleAddCategory} categoryColorMap={categoryColorMap} />
 
             <div className="flex flex-wrap gap-2">
-                {categories.map((category) => (
-                    <div key={category} className="bg-blue-500 text-white px-2 py-1 rounded">
-                        {category}
-                        <button
-                            type="button"
-                            onClick={() => setCategories(categories.filter(c => c !== category))}
-                            className="ml-2 text-xs"
-                        >
-                            ×
-                        </button>
-                    </div>
+                {categories.map((category, index) => (
+                    <Badge
+                        key={index}
+                        color={category.color}
+                        variant="light"
+                        className="cursor-pointer relative group"
+                        rightSection={
+                            <IconX
+                                size={14}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveCategory(category.name);
+                                }}
+                                style={{cursor: 'pointer'}}
+                            />
+                        }
+                        onClick={() => handleRemoveCategory(category.name)}
+                    >
+                        <span className="z-10 relative">{category.name}</span>
+                        <div className="absolute inset-0 bg-gray-500 opacity-0 group-hover:opacity-30 transition-opacity duration-200 rounded pointer-events-none"></div>
+                    </Badge>
                 ))}
             </div>
 
