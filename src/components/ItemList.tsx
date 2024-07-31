@@ -137,12 +137,19 @@ const ItemList: React.FC = () => {
             onClose={() => setIsModalOpen(false)}
             classNames={{
               overlay: "bg-[#1A1B1E] bg-opacity-55 backdrop-blur-sm",
-              header: "bg-[#242424]",
+              header: "bg-[#242424] relative",
               body: "bg-[#242424]",
-              close: "text-[#C1C2C5]",
-              title: "text-2xl font-bold",
+              close: "text-[#C1C2C5] absolute top-2 right-2 m-0 z-10",
+              title: "text-2xl font-bold break-words pr-0",
             }}
             title={`Update ${editedItem.name}`}
+            styles={{
+              title: {
+                wordBreak: 'break-word',
+                overflowWrap: 'break-word',
+                whiteSpace: 'normal',
+              },
+            }}
         >
           <Grid>
             <Grid.Col span={12}>

@@ -13,12 +13,13 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onEdit, onDelete }) =>
     const [menuOpened, setMenuOpened] = useState(false);
 
     return (
-        <Card shadow="sm" p="md" radius="md" withBorder className="bg-[#242424] border-2 border-[#3b3b3b] text-gray-300 w-full relative shadow-4xl" style={{ height: "200px", display: "flex", flexDirection: "column" }}>
-            <Card.Section className="bg-gradient-to-r from-blue-500 to-cyan-500 p-4">
+        <Card shadow="sm" p="md" radius="md" withBorder
+              className="bg-[#242424] border-2 border-[#3b3b3b] text-gray-300 w-full relative shadow-4xl"
+              style={{height: "200px", display: "flex", flexDirection: "column"}}>
+            <Card.Section className="bg-gradient-to-r from-blue-500 to-cyan-500 p-4 h-20 flex items-center">
                 <h2 className="text-white item-name" style={{
                     fontSize: "1.5rem",
                     lineHeight: 1.2,
-                    maxHeight: "3.6rem",
                     overflow: "hidden",
                     wordWrap: "break-word",
                     display: "-webkit-box",
@@ -28,9 +29,14 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onEdit, onDelete }) =>
                     {item.name}
                 </h2>
             </Card.Section>
-            <div className="flex-wrap gap-2 mt-2 justify-start">
+            <div className="flex flex-wrap mt-2 justify-start -ml-4">
                 {item.categories && item.categories.map((category, index) => (
-                    <Badge key={index} color={category.color} variant="light">
+                    <Badge
+                        key={index}
+                        color={category.color}
+                        variant="light"
+                        className="mb-1.5 ml-1.5 py-0.5 px-2 text-xs h-auto"
+                    >
                         {category.name}
                     </Badge>
                 ))}
@@ -45,17 +51,22 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onEdit, onDelete }) =>
                 <Grid.Col span={12} className="flex justify-end items-end">
                     <Menu opened={menuOpened} onChange={setMenuOpened}>
                         <Menu.Target>
-                            <ActionIcon variant="gradient" size="xl" gradient={{ from: "blue", to: "cyan", deg: 90 }} className="cursor-pointer absolute bottom-2 right-2 hover:brightness-75">
-                                <IconSettings size={24} />
+                            <ActionIcon variant="gradient" size="xl" gradient={{from: "blue", to: "cyan", deg: 90}}
+                                        className="cursor-pointer absolute bottom-2 right-2 hover:brightness-75">
+                                <IconSettings size={24}/>
                             </ActionIcon>
                         </Menu.Target>
                         <Transition transition="scale" duration={300} mounted={menuOpened} timingFunction="ease">
                             {(styles) => (
                                 <Menu.Dropdown className="bg-[#242424]" style={styles}>
-                                    <Menu.Item leftSection={<IconPencil style={{ width: 14, height: 14 }} />} className="cursor-pointer hover:bg-slate-500 hover:rounded-md text-white transition-colors duration-200" onClick={() => onEdit(item)}>
+                                    <Menu.Item leftSection={<IconPencil style={{width: 14, height: 14}}/>}
+                                               className="cursor-pointer hover:bg-slate-500 hover:rounded-md text-white transition-colors duration-200"
+                                               onClick={() => onEdit(item)}>
                                         Edit
                                     </Menu.Item>
-                                    <Menu.Item leftSection={<IconTrash style={{ width: 14, height: 14 }} />} className="cursor-pointer hover:bg-red-600 hover:rounded-md text-red-500 hover:text-white transition-colors duration-200" onClick={() => onDelete(item.id!)}>
+                                    <Menu.Item leftSection={<IconTrash style={{width: 14, height: 14}}/>}
+                                               className="cursor-pointer hover:bg-red-600 hover:rounded-md text-red-500 hover:text-white transition-colors duration-200"
+                                               onClick={() => onDelete(item.id!)}>
                                         Delete
                                     </Menu.Item>
                                 </Menu.Dropdown>
