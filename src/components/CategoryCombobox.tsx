@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Combobox, InputBase, useCombobox, Transition } from '@mantine/core';
 import { collection, onSnapshot, addDoc, getDocs, query, where, deleteDoc, doc } from "firebase/firestore";
 import { db } from '../firebase';
-import { getColorForCategory } from "@/src/utils/colorUtils";
+import { getColorForCategory, updateLocalCategoryColors, getLocalCategoryColors } from "../utils/categoryColorutils";
 
 interface CategoryComboboxProps {
     onCategorySelect: (category: string, color: string) => void;
@@ -16,26 +16,17 @@ export const CategoryCombobox: React.FC<CategoryComboboxProps> = ({ onCategorySe
         onDropdownClose: () => combobox.resetSelectedOption(),
     });
 
-    const handleSelect = (category: string) => {
-        const color = getColorForCategory(category, categoryColorMap);
-        onCategorySelect(category, color);
-    };
-
-    const seedCategories = async () => {
-        const defaultCategories = ['Fruits', 'Vegetables', 'Dairy', 'Meat', 'Grains'];
-        const categoriesCollection = collection(db, 'categories');
-
-        for (const category of defaultCategories) {
-            const querySnapshot = await getDocs(query(categoriesCollection, where('name', '==', category)));
-            if (querySnapshot.empty) {
-                const color = getColorForCategory(category, categoryColorMap);
-                await addDoc(categoriesCollection, { name: category, color });
-            }
+    const getLocalCategories = (): { name: string; color: string }[] => {
+        if (typeof window !== 'undefined') {
+            const localCategories = localStorage.getItem('categories');
+            return localCategories ? JSON.parse(localCategories) : [];
         }
+        return [];
     };
+
 
     useEffect(() => {
-        seedCategories();
+        // seedCategories();
         const categoriesCollection = collection(db, 'categories');
         const unsubscribe = onSnapshot(categoriesCollection, (snapshot) => {
             const categoriesList = snapshot.docs.map(doc => ({
@@ -44,28 +35,73 @@ export const CategoryCombobox: React.FC<CategoryComboboxProps> = ({ onCategorySe
                 color: doc.data().color
             }));
             setCategories(categoriesList);
+
+            // Store categories in local storage
+            localStorage.setItem('categories', JSON.stringify(categoriesList));
+
+            // Update local storage with the latest category colors
+            const colorUpdates = categoriesList.reduce((acc, category) => {
+                acc[category.name] = category.color;
+                return acc;
+            }, {} as Record<string, string>);
+            updateLocalCategoryColors(colorUpdates);
         });
 
         return () => unsubscribe();
     }, []);
 
+
+    const handleDeleteCategory = async (categoryName: string) => {
+        try {
+            const categoryQuery = query(collection(db, 'categories'), where('name', '==', categoryName));
+            const querySnapshot = await getDocs(categoryQuery);
+
+            if (!querySnapshot.empty) {
+                const categoryDoc = querySnapshot.docs[0];
+                await deleteDoc(doc(db, 'categories', categoryDoc.id));
+                console.log(`Category ${categoryName} deleted successfully`);
+
+                // Remove from local storage
+                const localCategories = getLocalCategories().filter(cat => cat.name !== categoryName);
+                localStorage.setItem('categories', JSON.stringify(localCategories));
+
+                // Update state
+                setCategories(localCategories);
+
+                // Remove the deleted category from local color storage
+                updateLocalCategoryColors({ [categoryName]: null });
+            } else {
+                console.log(`Category ${categoryName} not found`);
+            }
+        } catch (error) {
+            console.error("Error deleting category: ", error);
+        }
+    };
+
     const filteredCategories = search.trim() === ''
         ? categories
         : categories.filter(category =>
-            category.name && category.name.toLowerCase().includes(search.toLowerCase().trim())
+            category.name.toLowerCase().includes(search.toLowerCase().trim())
         );
 
     const handleOptionSubmit = async (val: string) => {
-        if (!categories.some(cat => cat.name === val)) {
+        const localCategories = getLocalCategories();
+        if (!localCategories.some(cat => cat.name === val)) {
             try {
                 const color = getColorForCategory(val, categoryColorMap);
-                await addDoc(collection(db, 'categories'), { name: val, color });
+                const newCategory = { name: val, color };
+                await addDoc(collection(db, 'categories'), newCategory);
+
+                // Add to local storage
+                localCategories.push(newCategory);
+                localStorage.setItem('categories', JSON.stringify(localCategories));
+
                 onCategorySelect(val, color);
             } catch (error) {
                 console.error("Error adding category: ", error);
             }
         } else {
-            const category = categories.find(cat => cat.name === val);
+            const category = localCategories.find(cat => cat.name === val);
             if (category) {
                 onCategorySelect(category.name, category.color);
             }
@@ -73,6 +109,7 @@ export const CategoryCombobox: React.FC<CategoryComboboxProps> = ({ onCategorySe
         setSearch('');
         combobox.closeDropdown();
     };
+
 
     const options = [
         ...filteredCategories.map(category => (
@@ -101,16 +138,6 @@ export const CategoryCombobox: React.FC<CategoryComboboxProps> = ({ onCategorySe
                 : 'Type to create a new category'}
         </Combobox.Option>
     ];
-
-    const handleDeleteCategory = async (categoryName: string) => {
-        try {
-            const categoryRef = doc(db, 'categories', categoryName);
-            await deleteDoc(categoryRef);
-            console.log(`Category ${categoryName} deleted successfully`);
-        } catch (error) {
-            console.error("Error deleting category: ", error);
-        }
-    };
 
     return (
         <Combobox
@@ -141,9 +168,19 @@ export const CategoryCombobox: React.FC<CategoryComboboxProps> = ({ onCategorySe
                 />
             </Combobox.Target>
 
-            <Transition transition="scale-y" duration={400} mounted={combobox.dropdownOpened}>
+            <Transition
+                transition="scale-y"
+                duration={400}
+                mounted={combobox.dropdownOpened}
+                exitDuration={400} // Add this line
+            >
                 {(styles) => (
-                    <Combobox.Dropdown style={styles}>
+                    <Combobox.Dropdown
+                        style={{
+                            ...styles,
+                            display: combobox.dropdownOpened ? 'block' : 'none', // Add this line
+                        }}
+                    >
                         <Combobox.Options>{options}</Combobox.Options>
                     </Combobox.Dropdown>
                 )}

@@ -1,74 +1,132 @@
-import React, { useState } from 'react';
-import { TextInput, Select, Group } from '@mantine/core';
-import { IconSearch } from '@tabler/icons-react';
-import { Item } from "../types/item";
+import React, { useState, useEffect } from 'react';
+import { TextInput, MultiSelect, Select, Group, Box, Button, SegmentedControl, Flex, ActionIcon } from '@mantine/core';
+import { collection, onSnapshot } from "firebase/firestore";
+import { db } from '../firebase';
+import { IconSearch, IconArrowUp, IconArrowDown } from '@tabler/icons-react';
 
 interface SearchBarProps {
-    onSearch: (searchText: string, selectedBadge: string | null) => void;
-    badges: string[];
+    onSearch: (searchTerm: string, selectedCategories: string[]) => void;
+    onViewChange: (newView: 'card' | 'list') => void;
+    onSortChange: (sortBy: string, sortOrder: 'asc' | 'desc') => void;
+    currentView: 'card' | 'list';
 }
 
-export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, badges }) => {
-    const [searchText, setSearchText] = useState('');
-    const [selectedBadge, setSelectedBadge] = useState<string | null>(null);
+export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onViewChange, onSortChange, currentView }) => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+    const [categories, setCategories] = useState<string[]>([]);
+    const [view, setView] = useState<'card' | 'list'>('card');
+    const [sortBy, setSortBy] = useState('name');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
-    const handleSearch = (text: string) => {
-        setSearchText(text);
-        onSearch(text, selectedBadge);
+    const segmentedControlStyle = {
+        indicator: {
+            backgroundImage: 'linear-gradient(to right, #3983F5, #08B4D5)',
+            boxShadow: '0 3px 10px 0 rgba(21, 37, 66, 0.35)',
+        },
     };
 
-    const handleBadgeSelect = (badge: string | null) => {
-        setSelectedBadge(badge);
-        onSearch(searchText, badge);
+    useEffect(() => {
+        const categoriesCollection = collection(db, 'categories');
+        const unsubscribe = onSnapshot(categoriesCollection, (snapshot) => {
+            setCategories(snapshot.docs.map(doc => doc.data().name));
+        });
+
+        return () => unsubscribe();
+    }, []);
+    const handleSearch = () => {
+        console.log('Searching with:', searchTerm, selectedCategories);
+
+        onSearch(searchTerm, selectedCategories);
+    };
+
+    const handleViewChange = (newView: string) => {
+        const view = newView as 'card' | 'list';
+        setView(view);
+        onViewChange(view);
+    };
+
+    const handleSortChange = (newSortBy: string) => {
+        setSortBy(newSortBy);
+        onSortChange(newSortBy, sortOrder);
+    };
+
+    const toggleSortOrder = () => {
+        const newSortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+        setSortOrder(newSortOrder);
+        onSortChange(sortBy, newSortOrder);
     };
 
     return (
-        <Group align="flex-start" className="mb-4">
-            <TextInput
-                placeholder="Search items..."
-                value={searchText}
-                onChange={(event) => handleSearch(event.currentTarget.value)}
-                className="flex-grow"
-                leftSection={<IconSearch size={16} />}
-                styles={{
-                    input: {
-                        backgroundColor: '#242424',
-                        color: 'white',
-                        border: '2px solid #3b3b3b',
-                    },
-                    section: { color: 'white' },
-                }}
-            />
-            <Select
-                placeholder="Filter by badge"
-                value={selectedBadge}
-                onChange={handleBadgeSelect}
-                data={[{ value: '', label: 'All' }, ...badges.map(badge => ({ value: badge, label: badge }))]}
-                clearable
-                className="w-48"
-                styles={(theme) => ({
-                input: {
-                    backgroundColor: '#242424',
-                    color: 'white',
-                    border: '2px solid #3b3b3b',
-                },
-                dropdown: {
-                    backgroundColor: '#1a1a1a',
-                    border: '1px solid #3b3b3b',
-                },
-                item: {
-                    '&[data-selected]': {
-                        '&, &:hover': {
-                            backgroundColor: '#2c2c2c',
-                            color: 'white',
-                        },
-                    },
-                    '&[data-hovered]': {
-                        backgroundColor: '#2c2c2c',
-                    },
-                },
-            })}
-                />
-        </Group>
+        <Box>
+            <Flex direction="column" gap="md">
+                <Flex justify="flex-end">
+                    <SegmentedControl
+                        value={currentView}
+                        radius = 'lg'
+                        onChange={handleViewChange}
+                        data={[
+                            { label: 'Card', value: 'card' },
+                            { label: 'List', value: 'list' },
+                        ]}
+                        styles={segmentedControlStyle}
+                    />
+                </Flex>
+
+                <Flex justify="space-between" align="flex-end">
+                    <Group align="flex-end">
+                        <TextInput
+                            size="md"
+                            label="Search"
+                            value={searchTerm}
+                            onChange={(event) => setSearchTerm(event.currentTarget.value)}
+                            onKeyUp={(event) => event.key === 'Enter' && handleSearch()}
+                        />
+                        <MultiSelect
+                            size="md"
+                            label="Categories"
+
+                            data={categories.filter(Boolean).map(category => ({ value: category, label: category }))}
+                            value={selectedCategories}
+                            onChange={(value) => setSelectedCategories(value || [])}
+                        />
+                        <Button
+                            size="md"
+                            onClick={handleSearch}
+                            leftSection={<IconSearch size={14} />}
+                        >
+                            Search
+                        </Button>
+                    </Group>
+
+                    <Flex direction="column" align="flex-end">
+                        <Box>
+                            <label style={{ fontSize: '14px', fontWeight: 500, marginBottom: '4px', display: 'block' }}>Sort by</label>
+                            <Group gap={0} align="center">
+                                <Select
+                                    size="md"
+                                    data={[
+                                        { value: 'name', label: 'Name' },
+                                        { value: 'amount', label: 'Amount' },
+                                    ]}
+                                    value={sortBy}
+                                    onChange={(value) => handleSortChange(value || 'name')}
+                                    style={{ minWidth: '100px' }}
+                                    styles={{ wrapper: { height: '36px' } }}
+                                />
+                                <ActionIcon
+                                    size={36}
+                                    variant="outline"
+                                    onClick={toggleSortOrder}
+                                    style={{ marginLeft: '-1px', borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}
+                                >
+                                    {sortOrder === 'asc' ? <IconArrowUp size={16} /> : <IconArrowDown size={16} />}
+                                </ActionIcon>
+                            </Group>
+                        </Box>
+                    </Flex>
+                </Flex>
+            </Flex>
+        </Box>
     );
 };

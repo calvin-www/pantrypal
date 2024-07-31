@@ -1,31 +1,20 @@
-import React, { useState, useCallback, useEffect, useMemo } from "react";
-import { CategoryCombobox } from "./CategoryCombobox";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { Grid, Loader } from "@mantine/core";
 import { collection, onSnapshot, deleteDoc, doc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
-import { IconPencil, IconTrash, IconSettings, IconX } from "@tabler/icons-react";
 import { Item } from "../types/item";
-import {
-  TextInput,
-  NumberInput,
-  Button,
-  Card,
-  Loader,
-  Grid,
-  Menu,
-  rem,
-  ActionIcon,
-  Badge,
-  Modal,
-  Text,
-  Transition,
-  Table,
-} from "@mantine/core";
-import { ItemCard } from './ItemCard';
-import { getColorForCategory } from '../utils/colorUtils';
-import { TableView } from './TableView';
+import { getColorForCategory, updateLocalCategoryColors, getLocalCategoryColors } from "../utils/categoryColorutils";
+import { ItemCard } from "./ItemCard";
+import EditModal from "./EditModal";
 
-const ItemList: React.FC = () => {
-  const [items, setItems] = useState<Item[]>([]);
+interface ItemListProps {
+  initialItems: Item[];
+  isCardView: boolean;
+  sortOption: string;
+}
+
+const ItemList: React.FC<ItemListProps> = ({ initialItems, isCardView, sortOption }) => {
+  const [items, setItems] = useState<Item[]>(initialItems);
   const [editedItem, setEditedItem] = useState<Item>({
     id: "",
     name: "",
@@ -34,98 +23,62 @@ const ItemList: React.FC = () => {
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [categoryColorMap] = useState(new Map<string, string>());
-  const [showTable, setShowTable] = useState(false);
+  const [categoryColorMap, setCategoryColorMap] = useState<Map<string, string>>(
+    new Map(),
+  );
 
-  interface TableViewProps {
-    items: Item[];
-    onEdit: (item: Item) => void;
-    onDelete: (id: string) => Promise<void>;
-  }
 
-  useEffect(() => {
-    const handleResize = () => {
-      setShowTable(window.innerWidth < 768 || items.length > 12);
-    };
+    useEffect(() => {
+        const localColors = getLocalCategoryColors();
+        setCategoryColorMap(new Map(Object.entries(localColors)));
+    }, []);
 
-    window.addEventListener('resize', handleResize);
-    handleResize(); // Call it initially
+    useEffect(() => {
+        const q = collection(db, "items");
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const itemsArr: Item[] = [];
+            const newColors: { [key: string]: string } = {};
 
-    return () => window.removeEventListener('resize', handleResize);
-  }, [items.length]);
+            snapshot.forEach((doc) => {
+                const item = doc.data() as Omit<Item, 'id'>;
+                const categories = Array.isArray(item.categories)
+                    ? item.categories.map(category => {
+                        if (typeof category === 'string') {
+                            const color = categoryColorMap.get(category) || getColorForCategory(category, categoryColorMap);
+                            newColors[category] = color;
+                            return { name: category, color };
+                        }
+                        return category;
+                    })
+                    : [];
 
-  useEffect(() => {
-    const q = collection(db, "items");
-    const unsubscribe = onSnapshot(q, (QuerySnapshot) => {
-      const itemsArr: Item[] = [];
-      QuerySnapshot.forEach((doc) => {
-        const item = doc.data() as Omit<Item, 'id'>;
-        const categories = Array.isArray(item.categories)
-            ? item.categories.map(category => {
-              if (typeof category === 'string') {
-                return { name: category, color: getColorForCategory(category, categoryColorMap) };
-              }
-              return category;
-            })
-            : [];
+                itemsArr.push({
+                    ...item,
+                    id: doc.id,
+                    categories: categories,
+                });
+            });
 
-        itemsArr.push({
-          ...item,
-          id: doc.id,
-          categories: categories,
+            setItems(itemsArr);
+            updateLocalCategoryColors(newColors);
+            setCategoryColorMap(new Map(Object.entries(newColors)));
+            setLoading(false);
         });
-      });
-      setItems(itemsArr);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, [categoryColorMap]);
+        return () => unsubscribe();
+    }, [categoryColorMap]);
 
-  const deleteItem = async (id: string) => {
+  const deleteItem = useCallback(async (id: string) => {
     try {
       await deleteDoc(doc(db, "items", id));
     } catch (error) {
       console.error("Error deleting document: ", error);
     }
-  };
-
-  const handleEdit = useCallback((item: Item) => {
-    setEditedItem(item);
-    setIsModalOpen(true);
   }, []);
 
-  const handleUpdate = useCallback(async () => {
-    try {
-      await updateDoc(doc(db, "items", editedItem.id!), {
-        name: editedItem.name.trim(),
-        amount: editedItem.amount,
-        categories: editedItem.categories,
-      });
-      setEditedItem({ id: "", name: "", amount: "", categories: [] });
-      setIsModalOpen(false);
-    } catch (error) {
-      console.error("Error updating document: ", error);
-    }
-  }, [editedItem]);
-
-  const handleAddCategory = (category: string) => {
-    if (category && typeof category === 'string') {
-      const color = getColorForCategory(category, categoryColorMap);
-      setEditedItem({
-        ...editedItem,
-        categories: [
-          ...editedItem.categories,
-          { name: category, color: color }
-        ],
-      });
-    }
-  };
-
-  const handleRemoveBadge = (index: number) => {
-    const updatedCategories = [...editedItem.categories];
-    updatedCategories.splice(index, 1);
-    setEditedItem({ ...editedItem, categories: updatedCategories });
-  };
+  const handleEdit = useCallback((item: Item) => {
+    setEditedItem({ ...item });
+    setIsModalOpen(true);
+  }, []);
 
   const memoizedItems = useMemo(() => {
     return items.map((item) => (
@@ -139,8 +92,6 @@ const ItemList: React.FC = () => {
     ));
   }, [items, handleEdit, deleteItem]);
 
-
-
   if (loading) {
     return (
         <div className="flex justify-center items-center h-full">
@@ -148,112 +99,17 @@ const ItemList: React.FC = () => {
         </div>
     );
   }
-
   return (
       <div className="w-full">
-        {showTable ? (
-            <TableView
-                items={items}
-                onEdit={handleEdit}
-                onDelete={deleteItem}
-            />
-        ) : (
-            <Grid>{memoizedItems}</Grid>
-        )}
+        <Grid>
+          {memoizedItems}
+        </Grid>
 
-        <Modal
-            opened={isModalOpen}
-            size="md"
-            onClose={() => setIsModalOpen(false)}
-            classNames={{
-              overlay: "bg-[#1A1B1E] bg-opacity-55 backdrop-blur-sm",
-              header: "bg-[#242424] relative",
-              body: "bg-[#242424]",
-              close: "text-[#C1C2C5] absolute top-2 right-2 m-0 z-10",
-              title: "text-2xl font-bold break-words pr-0",
-            }}
-            title={`Update ${editedItem.name}`}
-            styles={{
-              title: {
-                wordBreak: 'break-word',
-                overflowWrap: 'break-word',
-                whiteSpace: 'normal',
-              },
-            }}
-        >
-          <Grid>
-            <Grid.Col span={12}>
-              <Text className="text-white mb-2">Name:</Text>
-              <TextInput
-                  value={editedItem.name}
-                  onChange={(e) =>
-                      setEditedItem({ ...editedItem, name: e.target.value })
-                  }
-                  placeholder="Item name"
-                  className="text-white"
-                  styles={{ input: { backgroundColor: "#242424", color: "white" } }}
-              />
-            </Grid.Col>
-            <Grid.Col span={12}>
-              <Text className="text-white mb-2">Amount:</Text>
-              <NumberInput
-                  value={parseFloat(editedItem.amount)}
-                  onChange={(value) =>
-                      setEditedItem({
-                        ...editedItem,
-                        amount: value?.toString() || "",
-                      })
-                  }
-                  placeholder="Amount"
-                  classNames={{
-                    input: "bg-[#242424] text-white placeholder-gray-400",
-                    control: "text-white hover:bg-[#3b3b3b]",
-                  }}
-              />
-            </Grid.Col>
-            <Grid.Col span={12}>
-              <Text className="text-white mb-2">Categories:</Text>
-              <CategoryCombobox onCategorySelect={handleAddCategory} categoryColorMap={categoryColorMap} />
-            </Grid.Col>
-            <Grid.Col span={12}>
-              <div className="flex flex-wrap gap-2">
-                {editedItem.categories &&
-                    editedItem.categories.map((category, index) => (
-                        <Badge
-                            key={index}
-                            color={category.color}
-                            variant="light"
-                            className="cursor-pointer relative group"
-                            rightSection={
-                              <IconX
-                                  size={14}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleRemoveBadge(index);
-                                  }}
-                                  style={{ cursor: 'pointer' }}
-                              />
-                            }
-                            onClick={() => handleRemoveBadge(index)}
-                        >
-                          <span className="z-10 relative">{category.name}</span>
-                          <div className="absolute inset-0 bg-gray-500 opacity-0 group-hover:opacity-30 transition-opacity duration-200 rounded pointer-events-none"></div>
-                        </Badge>
-                    ))}
-              </div>
-
-              <Button
-                  variant="gradient"
-                  gradient={{ from: 'blue', to: 'cyan' }}
-                  fullWidth
-                  onClick={handleUpdate}
-                  className="mt-4"
-              >
-                Update Item
-              </Button>
-            </Grid.Col>
-          </Grid>
-        </Modal>
+        <EditModal
+            item={editedItem}
+            isModalOpen={isModalOpen}
+            setIsModalOpen={setIsModalOpen}
+        />
       </div>
   );
 };

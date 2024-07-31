@@ -1,16 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, Text, ActionIcon, Menu, Badge, Grid, Transition } from '@mantine/core';
 import { IconPencil, IconTrash, IconSettings } from '@tabler/icons-react';
 import { Item } from '../types/item';
+import { getLocalCategoryColors, updateLocalCategoryColors } from "../utils/categoryColorutils";
 
 interface ItemCardProps {
     item: Item;
     onEdit: (item: Item) => void;
     onDelete: (id: string) => void;
 }
+interface Category {
+    name: string;
+    color: string;
+}
 
 export const ItemCard: React.FC<ItemCardProps> = ({ item, onEdit, onDelete }) => {
     const [menuOpened, setMenuOpened] = useState(false);
+    const [categoryColorMap, setCategoryColorMap] = useState<Map<string, string>>(new Map());
+
+    useEffect(() => {
+        const localColors = getLocalCategoryColors();
+        setCategoryColorMap(new Map(Object.entries(localColors)));
+    }, []);
+
+    const getLocalCategories = (): Category[] => {
+        const localCategories = localStorage.getItem('categories');
+        return localCategories ? JSON.parse(localCategories) : [];
+    };
+
+    const itemCategories = item.categories.map(category => {
+        const localCategory = getLocalCategories().find((cat: Category) => cat.name === category.name);        return localCategory || category;
+    });
 
     return (
         <Card shadow="sm" p="md" radius="md" withBorder
@@ -30,7 +50,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onEdit, onDelete }) =>
                 </h2>
             </Card.Section>
             <div className="flex flex-wrap mt-2 justify-start -ml-4">
-                {item.categories && item.categories.map((category, index) => (
+                {itemCategories.map((category, index) => (
                     <Badge
                         key={index}
                         color={category.color}

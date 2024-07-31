@@ -49,3 +49,10 @@ body {
   -webkit-line-clamp: 2; /* Limit to 2 lines */
   -webkit-box-orient: vertical;
 }
+.indicator {
+  background-image: linear-gradient(
+          to right,
+          var(--mantine-color-pink-filled),
+          var(--mantine-color-orange-filled)
+  );
+}
