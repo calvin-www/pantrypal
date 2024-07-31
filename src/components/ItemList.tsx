@@ -18,9 +18,11 @@ import {
   Modal,
   Text,
   Transition,
+  Table,
 } from "@mantine/core";
 import { ItemCard } from './ItemCard';
 import { getColorForCategory } from '../utils/colorUtils';
+import { TableView } from './TableView';
 
 const ItemList: React.FC = () => {
   const [items, setItems] = useState<Item[]>([]);
@@ -33,6 +35,24 @@ const ItemList: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [categoryColorMap] = useState(new Map<string, string>());
+  const [showTable, setShowTable] = useState(false);
+
+  interface TableViewProps {
+    items: Item[];
+    onEdit: (item: Item) => void;
+    onDelete: (id: string) => Promise<void>;
+  }
+
+  useEffect(() => {
+    const handleResize = () => {
+      setShowTable(window.innerWidth < 768 || items.length > 12);
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Call it initially
+
+    return () => window.removeEventListener('resize', handleResize);
+  }, [items.length]);
 
   useEffect(() => {
     const q = collection(db, "items");
@@ -119,6 +139,8 @@ const ItemList: React.FC = () => {
     ));
   }, [items, handleEdit, deleteItem]);
 
+
+
   if (loading) {
     return (
         <div className="flex justify-center items-center h-full">
@@ -128,8 +150,16 @@ const ItemList: React.FC = () => {
   }
 
   return (
-      <Grid className="w-full">
-        {memoizedItems}
+      <div className="w-full">
+        {showTable ? (
+            <TableView
+                items={items}
+                onEdit={handleEdit}
+                onDelete={deleteItem}
+            />
+        ) : (
+            <Grid>{memoizedItems}</Grid>
+        )}
 
         <Modal
             opened={isModalOpen}
@@ -224,7 +254,7 @@ const ItemList: React.FC = () => {
             </Grid.Col>
           </Grid>
         </Modal>
-      </Grid>
+      </div>
   );
 };
 

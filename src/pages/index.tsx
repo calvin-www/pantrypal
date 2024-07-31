@@ -9,6 +9,7 @@ import {
   rem,
   Stack,
   Button,
+    ScrollArea
 } from "@mantine/core";
 import InputForm from "../components/InputForm";
 import ItemList from "../components/ItemList";
@@ -36,11 +37,14 @@ function Home() {
                   shadow="lg"
                   radius="lg"
                   p="xl"
-                  className="bg-[#242424] border-2 border-[#3b3b3b] col-span-2 h-[calc(100vh-8rem)]"
+                  className="bg-[#242424] border-2 border-[#3b3b3b] col-span-2"
+                  style={{ height: 'calc(100vh - 8rem)' }}
               >
-                <Stack className="h-full">
-                  <ItemList key={refresh.toString()} />
-                </Stack>
+                <ScrollArea h='100%' type="scroll" scrollbarSize={10} scrollHideDelay={1500}>
+                  <Stack>
+                    <ItemList key={refresh.toString()} />
+                  </Stack>
+                </ScrollArea>
               </Paper>
 
               <Grid gutter="md">
