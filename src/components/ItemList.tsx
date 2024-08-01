@@ -20,6 +20,7 @@ const ItemList: React.FC<ItemListProps> = ({ initialItems }) => {
         name: "",
         amount: "",
         categories: [],
+        createdAt: "",
     });
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [loading, setLoading] = useState(false);
