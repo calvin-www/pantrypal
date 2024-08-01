@@ -5,23 +5,17 @@ import { Table, Badge, ActionIcon } from '@mantine/core';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { IconPencil, IconTrash } from '@tabler/icons-react';
 import EditModal from './EditModal';
-import { useViewportSize } from '@mantine/hooks';
-import { getLocalCategoryColors } from "../utils/categoryColorutils";
 
 interface TableViewProps {
     items: Item[];
     onItemsChange: () => void;
+    filteredItems: Item[];
 }
 
-export const TableView: React.FC<TableViewProps> = ({ items, onItemsChange }) => {
+export const TableView: React.FC<TableViewProps> = ({ items, onItemsChange, filteredItems }) => {
     const [editedItem, setEditedItem] = useState<Item | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [categoryColorMap, setCategoryColorMap] = useState<Map<string, string>>(new Map());
-
-    useEffect(() => {
-        const localColors = getLocalCategoryColors();
-        setCategoryColorMap(new Map(Object.entries(localColors)));
-    }, []);
+    const displayItems = filteredItems.length > 0 ? filteredItems : items;
 
     const handleEdit = (item: Item) => {
         setEditedItem(item);

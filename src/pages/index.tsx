@@ -22,10 +22,13 @@ function Home() {
   const [refresh, setRefresh] = useState(false);
   const [allItems, setAllItems] = useState<Item[]>([]);
   const [filteredItems, setFilteredItems] = useState<Item[]>([]);
-  const [isCardView, setIsCardView] = useState(true);
   const [sortOption, setSortOption] = useState<string>('name');
   const { width } = useViewportSize();
 
+  useEffect(() => {
+    // This code will only run on the client side
+    setIsCardView(window.innerWidth >= 768 && filteredItems.length <= 12);
+  }, [filteredItems.length]);
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "items"), (snapshot) => {
       const items = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Item));
@@ -35,22 +38,31 @@ function Home() {
 
     return () => unsubscribe();
   }, []);
+  const [isCardView, setIsCardView] = useState(true); // Set a default value
 
-  const handleAddItem = () => {
-    setRefresh(!refresh);
-  };
+
+  const handleItemChange = useCallback(() => {
+    setRefresh(prev => !prev);
+  }, []);
+
+  const handleViewChange = useCallback((view: 'card' | 'list') => {
+    setIsCardView(view === 'card');
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {
-      const newIsCardView = width >= 768 && filteredItems.length <= 12;
-      setIsCardView(newIsCardView);
+      if (window.innerWidth >= 768) {
+        setIsCardView(filteredItems.length <= 12);
+      } else {
+        setIsCardView(false);
+      }
     };
 
     handleResize();
     window.addEventListener('resize', handleResize);
 
     return () => window.removeEventListener('resize', handleResize);
-  }, [filteredItems.length, width]);
+  }, [filteredItems.length]);
 
   const handleSearch = useCallback((searchTerm: string, selectedCategories: string[]) => {
     const filtered = allItems.filter(item => {
@@ -62,10 +74,6 @@ function Home() {
 
     setFilteredItems(filtered);
   }, [allItems]);
-
-  const handleViewChange = (view: 'card' | 'list') => {
-    setIsCardView(view === 'card');
-  };
 
   return (
       <div className="bg-[#1f1f1f] min-h-screen flex flex-col">
@@ -105,7 +113,8 @@ function Home() {
                       ) : (
                           <TableView
                               items={filteredItems}
-                              onItemsChange={() => setRefresh(!refresh)}
+                              filteredItems={filteredItems}
+                              onItemsChange={handleItemChange}
                           />
                       )}
                     </ScrollArea>
@@ -120,7 +129,7 @@ function Home() {
                     p="xl"
                     className="bg-[#242424] border-2 border-[#3b3b3b]"
                 >
-                  <InputForm onAdd={handleAddItem}/>
+                  <InputForm onAdd={handleItemChange}/>
                 </Paper>
                 <Paper
                     shadow="lg"
