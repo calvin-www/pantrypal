@@ -5,6 +5,7 @@ import { addDoc, collection } from 'firebase/firestore';
 import { db } from '../firebase';
 import { CategoryCombobox } from './CategoryCombobox';
 import { getLocalCategoryColors } from "../utils/categoryColorutils";
+import { Item } from '../types/item';
 
 interface InputFormProps {
     onAdd: () => void;
@@ -23,24 +24,27 @@ const InputForm: React.FC<InputFormProps> = ({ onAdd }) => {
         setCategoryColorMap(new Map(Object.entries(localColors)));
     }, []);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!name.trim() || !amount.trim()) {
-            setShowNotification(true);
-            return;
-        }
-        try {
-            await addDoc(collection(db, "items"), {
-                name: name.trim(),
-                amount: parseFloat(amount),
+    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (name && amount) {
+            const newItem: Item = {
+                id: '',
+                name,
+                amount,
                 categories: categories.map(cat => ({ name: cat.name, color: cat.color })),
-            });
-            setName('');
-            setAmount('');
-            setCategories([]);
-            onAdd();
-        } catch (error) {
-            console.error("Error adding document: ", error);
+                createdAt: new Date().toISOString()
+            };
+            try {
+                await addDoc(collection(db, "items"), newItem);
+                setName('');
+                setAmount('');
+                setCategories([]);
+                onAdd();
+            } catch (error) {
+                console.error("Error adding document: ", error);
+            }
+        } else {
+            setShowNotification(true);
         }
     };
 

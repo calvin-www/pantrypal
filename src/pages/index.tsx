@@ -1,12 +1,9 @@
 import React, { useState, useCallback, useEffect } from "react";
 import {
-  Container,
   Paper,
-  Grid,
   SimpleGrid,
   Stack,
   ScrollArea,
-  Switch,
   Box
 } from "@mantine/core";
 import InputForm from "../components/InputForm";
@@ -21,25 +18,25 @@ import { useViewportSize } from '@mantine/hooks';
 function Home() {
   const [refresh, setRefresh] = useState(false);
   const [allItems, setAllItems] = useState<Item[]>([]);
-  const [filteredItems, setFilteredItems] = useState<Item[]>([]);
+  const [filteredAndSortedItems, setFilteredAndSortedItems] = useState<Item[]>([]);
   const [sortOption, setSortOption] = useState<string>('name');
+  const [isCardView, setIsCardView] = useState(true);
   const { width } = useViewportSize();
 
-  useEffect(() => {
-    // This code will only run on the client side
-    setIsCardView(window.innerWidth >= 768 && filteredItems.length <= 12);
-  }, [filteredItems.length]);
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "items"), (snapshot) => {
       const items = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Item));
       setAllItems(items);
-      setFilteredItems(items);
+      const sortedItems = [...items].sort((a, b) => {
+        const aDate = a.createdAt ? new Date(a.createdAt) : new Date(0);
+        const bDate = b.createdAt ? new Date(b.createdAt) : new Date(0);
+        return bDate.getTime() - aDate.getTime();
+      });
+      setFilteredAndSortedItems(sortedItems);
     });
 
     return () => unsubscribe();
   }, []);
-  const [isCardView, setIsCardView] = useState(true); // Set a default value
-
 
   const handleItemChange = useCallback(() => {
     setRefresh(prev => !prev);
@@ -49,12 +46,17 @@ function Home() {
     setIsCardView(view === 'card');
   }, []);
 
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth >= 768) {
-        setIsCardView(filteredItems.length <= 12);
-      } else {
-        setIsCardView(false);
+      if (!initialLoadComplete) {
+        if (window.innerWidth >= 768) {
+          setIsCardView(filteredAndSortedItems.length <= 12);
+        } else {
+          setIsCardView(false);
+        }
+        setInitialLoadComplete(true);
       }
     };
 
@@ -62,17 +64,32 @@ function Home() {
     window.addEventListener('resize', handleResize);
 
     return () => window.removeEventListener('resize', handleResize);
-  }, [filteredItems.length]);
+  }, [filteredAndSortedItems.length, initialLoadComplete]);
 
-  const handleSearch = useCallback((searchTerm: string, selectedCategories: string[]) => {
-    const filtered = allItems.filter(item => {
+  const handleSearchAndSort = useCallback((searchTerm: string, selectedCategories: string[], sortBy: string, sortOrder: 'asc' | 'desc') => {
+    let filtered = allItems.filter(item => {
       const matchesSearchTerm = item.name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = selectedCategories.length === 0 ||
           item.categories.some(category => selectedCategories.includes(category.name));
       return matchesSearchTerm && matchesCategory;
     });
 
-    setFilteredItems(filtered);
+    filtered.sort((a, b) => {
+      if (sortBy === 'recentlyAdded') {
+        const aDate = a.createdAt ? new Date(a.createdAt) : new Date(0);
+        const bDate = b.createdAt ? new Date(b.createdAt) : new Date(0);
+        return sortOrder === 'asc' ? aDate.getTime() - bDate.getTime() : bDate.getTime() - aDate.getTime();
+      } else {
+        const aValue = a[sortBy as keyof Item];
+        const bValue = b[sortBy as keyof Item];
+        if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+        return 0;
+      }
+    });
+
+    setFilteredAndSortedItems(filtered);
+    setSortOption(sortBy);
   }, [allItems]);
 
   return (
@@ -93,10 +110,11 @@ function Home() {
                 <Stack gap="md" style={{height: '100%'}}>
                   <Box className="bg-[#2c2c2c] p-4 rounded-lg">
                     <SearchBar
-                        onSearch={handleSearch}
+                        onSearchAndSort={handleSearchAndSort}
                         onViewChange={handleViewChange}
                         onSortChange={(sortBy, sortOrder) => {
                           setSortOption(sortBy);
+                          handleSearchAndSort('', [], sortBy, sortOrder);
                         }}
                         currentView={isCardView ? 'card' : 'list'}
                     />
@@ -106,15 +124,15 @@ function Home() {
                       {isCardView ? (
                           <ItemList
                               key={refresh.toString()}
-                              initialItems={filteredItems}
+                              initialItems={filteredAndSortedItems}
                               isCardView={true}
                               sortOption={sortOption}
                           />
                       ) : (
                           <TableView
-                              items={filteredItems}
-                              filteredItems={filteredItems}
-                              onItemsChange={handleItemChange}
+                              items={filteredAndSortedItems}
+                              filteredItems={filteredAndSortedItems}
+                              onItemsChange={() => setRefresh(!refresh)}
                           />
                       )}
                     </ScrollArea>

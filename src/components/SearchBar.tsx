@@ -5,19 +5,18 @@ import { db } from '../firebase';
 import { IconSearch, IconArrowUp, IconArrowDown } from '@tabler/icons-react';
 
 interface SearchBarProps {
-    onSearch: (searchTerm: string, selectedCategories: string[]) => void;
     onViewChange: (newView: 'card' | 'list') => void;
     onSortChange: (sortBy: string, sortOrder: 'asc' | 'desc') => void;
     currentView: 'card' | 'list';
+    onSearchAndSort: (searchTerm: string, selectedCategories: string[], sortBy: string, sortOrder: 'asc' | 'desc') => void;
 }
 
-export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onViewChange, onSortChange, currentView }) => {
+export const SearchBar: React.FC<SearchBarProps> = ({ onSearchAndSort, onViewChange, currentView }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
     const [categories, setCategories] = useState<string[]>([]);
-    const [view, setView] = useState<'card' | 'list'>('card');
-    const [sortBy, setSortBy] = useState('name');
-    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+    const [sortBy, setSortBy] = useState('recentlyAdded');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
     const segmentedControlStyle = {
         indicator: {
@@ -25,7 +24,9 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onViewChange, on
             boxShadow: '0 3px 10px 0 rgba(21, 37, 66, 0.35)',
         },
     };
-
+    useEffect(() => {
+        onSearchAndSort('', [], sortBy, sortOrder);
+    }, []);
     useEffect(() => {
         const categoriesCollection = collection(db, 'categories');
         const unsubscribe = onSnapshot(categoriesCollection, (snapshot) => {
@@ -35,26 +36,30 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onViewChange, on
         return () => unsubscribe();
     }, []);
     const handleSearch = () => {
-        console.log('Searching with:', searchTerm, selectedCategories);
-
-        onSearch(searchTerm, selectedCategories);
+        onSearchAndSort(searchTerm, selectedCategories, sortBy, sortOrder);
     };
-
     const handleViewChange = (newView: string) => {
         const view = newView as 'card' | 'list';
-        setView(view);
         onViewChange(view);
     };
 
+
     const handleSortChange = (newSortBy: string) => {
         setSortBy(newSortBy);
-        onSortChange(newSortBy, sortOrder);
+        // Keep the current sort order
+        onSearchAndSort(searchTerm, selectedCategories, newSortBy, sortOrder);
     };
 
     const toggleSortOrder = () => {
         const newSortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
         setSortOrder(newSortOrder);
-        onSortChange(sortBy, newSortOrder);
+        onSearchAndSort(searchTerm, selectedCategories, sortBy, newSortOrder);
+    };
+
+    const clearSearch = () => {
+        setSearchTerm('');
+        setSelectedCategories([]);
+        onSearchAndSort('', [], sortBy, sortOrder);
     };
 
     return (
@@ -75,6 +80,13 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onViewChange, on
 
                 <Flex justify="space-between" align="flex-end">
                     <Group align="flex-end">
+                        <Button
+                            size="compact-md"
+                            onClick={clearSearch}
+                        >
+                            Clear
+                        </Button>
+
                         <TextInput
                             size="md"
                             label="Search"
@@ -91,7 +103,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onViewChange, on
                             onChange={(value) => setSelectedCategories(value || [])}
                         />
                         <Button
-                            size="md"
+                            size="compact-md"
                             onClick={handleSearch}
                             leftSection={<IconSearch size={14} />}
                         >
@@ -108,6 +120,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onViewChange, on
                                     data={[
                                         { value: 'name', label: 'Name' },
                                         { value: 'amount', label: 'Amount' },
+                                        { value: 'recentlyAdded', label: 'Recently Added' },
                                     ]}
                                     value={sortBy}
                                     onChange={(value) => handleSortChange(value || 'name')}
