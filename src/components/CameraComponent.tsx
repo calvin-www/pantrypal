@@ -39,9 +39,8 @@ const CameraComponent = ({ onImageCapture, onClose }: { onImageCapture: (url: st
                     createdAt: new Date().toISOString()
                 });
 
-                // Call onImageCapture with the download URL
                 onImageCapture(downloadURL);
-                onClose();
+                onClose(); // This should close the modal
             } catch (error) {
                 console.error("Error saving image: ", error);
             }
@@ -86,12 +85,14 @@ const CameraComponent = ({ onImageCapture, onClose }: { onImageCapture: (url: st
                     radius="lg"
                     className="m-4 p-4 bg-[#242424] border-2 border-[#3b3b3b] relative">
                     <Image src={image} alt="Taken photo" layout="responsive" width={16} height={9} />
-                    <div className="absolute top-4 right-4 space-x-2">
-                        <ActionIcon size="lg" radius="xl" variant="filled" color="green" onClick={saveImage}>
-                            <IconArrowRight size={24} />
+                    <div className="absolute top-4 left-4">
+                        <ActionIcon size="xl" radius="xl" variant="filled" color="red" onClick={deleteImage}>
+                            <IconArrowBack size={32} />
                         </ActionIcon>
-                        <ActionIcon size="lg" radius="xl" variant="filled" color="red" onClick={deleteImage}>
-                            <IconArrowBack size={24} />
+                    </div>
+                    <div className="absolute top-4 right-4">
+                        <ActionIcon size="xl" radius="xl" variant="filled" color="green" onClick={saveImage}>
+                            <IconArrowRight size={32} />
                         </ActionIcon>
                     </div>
                 </Paper>
