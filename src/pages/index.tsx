@@ -1,6 +1,8 @@
 import React, { useState, useCallback, useEffect } from "react";
 import {
   Paper,
+    Button,
+    Modal,
   SimpleGrid,
   Stack,
   ScrollArea,
@@ -10,6 +12,7 @@ import InputForm from "../components/InputForm";
 import ItemList from "../components/ItemList";
 import { SearchBar } from "../components/SearchBar";
 import { TableView } from "../components/TableView";
+import CameraComponent from '../components/CameraComponent';
 import { Item } from "../types/item";
 import { db } from "../firebase";
 import { collection, onSnapshot } from "firebase/firestore";
@@ -103,10 +106,16 @@ function Home() {
     setSortOption(sortBy);
   }, [allItems]);
 
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+
+  const openCamera = () => setIsCameraOpen(true);
+  const closeCamera = () => setIsCameraOpen(false);
   return (
       <div className="bg-[#1f1f1f] min-h-screen flex flex-col">
         <div className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 p-4">
-          <h1 className="text-2xl font-bold text-white max-w-[1400px] mx-auto px-4">PantryPal!</h1>
+          <h1 className="text-2xl font-bold text-white max-w-[1400px] mx-auto px-4">
+            PantryPal!
+          </h1>
         </div>
         <div className="flex-grow flex justify-center items-start py-4 overflow-x-auto">
           <div className="w-full max-w-[1400px] px-4 min-w-[320px]">
@@ -116,22 +125,27 @@ function Home() {
                   radius="lg"
                   p="xl"
                   className="bg-[#242424] border-2 border-[#3b3b3b] col-span-3"
-                  style={{height: 'calc(100vh - 8rem)', minWidth: '300px'}}
+                  style={{height: "calc(100vh - 8rem)", minWidth: "300px"}}
               >
-                <Stack gap="md" style={{height: '100%'}}>
+                <Stack gap="md" style={{height: "100%"}}>
                   <Box className="bg-[#2c2c2c] p-4 rounded-lg">
                     <SearchBar
                         onSearchAndSort={handleSearchAndSort}
                         onViewChange={handleViewChange}
                         onSortChange={(sortBy, sortOrder) => {
                           setSortOption(sortBy);
-                          handleSearchAndSort('', [], sortBy, sortOrder);
+                          handleSearchAndSort("", [], sortBy, sortOrder);
                         }}
-                        currentView={isCardView ? 'card' : 'list'}
+                        currentView={isCardView ? "card" : "list"}
                     />
                   </Box>
                   <Box className="bg-[#2c2c2c] p-4 rounded-lg flex-grow overflow-hidden">
-                    <ScrollArea style={{height: '100%'}} type="scroll" scrollbarSize={10} scrollHideDelay={1500}>
+                    <ScrollArea
+                        style={{height: "100%"}}
+                        type="scroll"
+                        scrollbarSize={10}
+                        scrollHideDelay={1500}
+                    >
                       {isCardView ? (
                           <ItemList
                               key={refresh.toString()}
@@ -166,7 +180,9 @@ function Home() {
                     p="xl"
                     className="bg-[#242424] border-2 border-[#3b3b3b]"
                 >
-                  {/* Additional content */}
+                  <Button onClick={openCamera} fullWidth>
+                    Open Camera
+                  </Button>
                 </Paper>
                 <Paper
                     shadow="lg"
@@ -180,6 +196,14 @@ function Home() {
             </SimpleGrid>
           </div>
         </div>
+        <Modal
+            opened={isCameraOpen}
+            onClose={closeCamera}
+            size="xl"
+            title="Camera"
+        >
+          <CameraComponent onClose={closeCamera} />
+        </Modal>
       </div>
   );
 }
