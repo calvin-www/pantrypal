@@ -3,7 +3,7 @@ import { useViewportSize } from '@mantine/hooks';
 import { TextInput, MultiSelect, Select, Group, Box, Button, SegmentedControl, Flex, ActionIcon } from '@mantine/core';
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from '../firebase';
-import { IconSearch, IconArrowUp, IconArrowDown, IconX } from '@tabler/icons-react';
+import { IconSearch, IconArrowUp, IconArrowDown, IconX, IconAbc, IconRuler, IconClock } from '@tabler/icons-react';
 
 interface SearchBarProps {
     onViewChange: (newView: 'card' | 'list') => void;
@@ -234,34 +234,40 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearchAndSort, onViewCha
                                     </ActionIcon>
                                 </Group>
 
-                                <Group gap={0} align="center">
-                                    <Select
-                                        size="sm"
-                                        data={[
-                                            {value: 'name', label: 'Name'},
-                                            {value: 'amount', label: 'Amount'},
-                                            {value: 'recentlyAdded', label: 'Recently Added'},
-                                        ]}
-                                        value={sortBy}
-                                        onChange={(value) => handleSortChange(value || 'name')}
-                                        styles={{
-                                            ...inputStyles,
-                                            wrapper: {...inputStyles.wrapper, width: '150px'},
-                                        }}
-                                    />
+                                <Group gap={0}>
+                                    <Button.Group>
+                                        <ActionIcon
+                                            size="lg"
+                                            variant={sortBy === 'name' ? 'filled' : 'subtle'}
+                                            onClick={() => handleSortChange('name')}
+                                            style={{backgroundColor: sortBy === 'name' ? "#3983F5" : "#242424"}}
+                                        >
+                                            <IconAbc size={20} />
+                                        </ActionIcon>
+                                        <ActionIcon
+                                            size="lg"
+                                            variant={sortBy === 'amount' ? 'filled' : 'subtle'}
+                                            onClick={() => handleSortChange('amount')}
+                                            style={{backgroundColor: sortBy === 'amount' ? "#3983F5" : "#242424"}}
+                                        >
+                                            <IconRuler size={20} />
+                                        </ActionIcon>
+                                        <ActionIcon
+                                            size="lg"
+                                            variant={sortBy === 'recentlyAdded' ? 'filled' : 'subtle'}
+                                            onClick={() => handleSortChange('recentlyAdded')}
+                                            style={{backgroundColor: sortBy === 'recentlyAdded' ? "#3983F5" : "#242424"}}
+                                        >
+                                            <IconClock size={20} />
+                                        </ActionIcon>
+                                    </Button.Group>
                                     <ActionIcon
-                                        size={36}
-                                        variant="outline"
+                                        size="lg"
+                                        variant="filled"
                                         onClick={toggleSortOrder}
-                                        style={{
-                                            marginLeft: '-1px',
-                                            borderTopLeftRadius: 0,
-                                            borderBottomLeftRadius: 0,
-                                            backgroundColor: "#242424",
-                                            color: "white"
-                                        }}
+                                        style={{backgroundColor: "#242424", color: "white"}}
                                     >
-                                        {sortOrder === 'asc' ? <IconArrowUp size={16}/> : <IconArrowDown size={16}/>}
+                                        {sortOrder === 'asc' ? <IconArrowUp size={20} /> : <IconArrowDown size={20} />}
                                     </ActionIcon>
                                 </Group>
                             </Flex>
@@ -277,8 +283,8 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearchAndSort, onViewCha
                             />
                         </Flex>
                     </Box>
-
                 </Flex>
+
             )}
         </Box>
     );

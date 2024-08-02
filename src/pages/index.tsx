@@ -16,7 +16,6 @@ import CameraComponent from "../components/CameraComponent";
 import { Item } from "../types/item";
 import { db } from "../firebase";
 import { collection, onSnapshot, addDoc } from "firebase/firestore";
-import CameraExample from "../components/CameraExample"; // Import the CameraExample component
 
 
 function Home() {
@@ -246,24 +245,6 @@ function Home() {
           }}
       >
         <CameraComponent onImageCapture={handleImageCapture} onClose={closeCamera} />
-      </Modal>
-      <Modal
-          opened={isCameraExampleOpen}
-          onClose={closeCameraExample}
-          size="xl"
-          title="Camera Example"
-          fullScreen
-          styles={{
-            inner: { padding: 0 },
-            body: {
-              padding: 0,
-              height: "100vh",
-              display: "flex",
-              flexDirection: "column",
-            },
-          }}
-      >
-        <CameraExample />
       </Modal>
     </div>
   );
