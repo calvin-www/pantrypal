@@ -212,12 +212,14 @@ function Home() {
                 </Button>
               </Paper>
               <Paper
-                shadow="lg"
-                radius="lg"
-                p="xl"
-                className="bg-[#242424] border-2 border-[#3b3b3b]"
+                  shadow="lg"
+                  radius="lg"
+                  p="xl"
+                  className="bg-[#242424] border-2 border-[#3b3b3b]"
               >
-                {/* Additional content */}
+                <Button onClick={openCameraExample} fullWidth>
+                  Open Camera Example
+                </Button>
               </Paper>
             </Stack>
           </SimpleGrid>
