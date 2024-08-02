@@ -16,6 +16,8 @@ import CameraComponent from "../components/CameraComponent";
 import { Item } from "../types/item";
 import { db } from "../firebase";
 import { collection, onSnapshot } from "firebase/firestore";
+import CameraExample from "../components/CameraExample"; // Import the CameraExample component
+
 
 function Home() {
   const [refresh, setRefresh] = useState(false);
@@ -131,6 +133,10 @@ function Home() {
 
   const openCamera = () => setIsCameraOpen(true);
   const closeCamera = () => setIsCameraOpen(false);
+
+  const [isCameraExampleOpen, setIsCameraExampleOpen] = useState(false); // New state for CameraExample modal
+  const openCameraExample = () => setIsCameraExampleOpen(true); // New function to open CameraExample modal
+  const closeCameraExample = () => setIsCameraExampleOpen(false);
   return (
     <div className="bg-[#1f1f1f] min-h-screen flex flex-col">
       <div className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 p-4">
@@ -234,6 +240,24 @@ function Home() {
           }}
       >
         <CameraComponent onClose={closeCamera} />
+      </Modal>
+      <Modal
+          opened={isCameraExampleOpen}
+          onClose={closeCameraExample}
+          size="xl"
+          title="Camera Example"
+          fullScreen
+          styles={{
+            inner: { padding: 0 },
+            body: {
+              padding: 0,
+              height: "100vh",
+              display: "flex",
+              flexDirection: "column",
+            },
+          }}
+      >
+        <CameraExample />
       </Modal>
     </div>
   );
