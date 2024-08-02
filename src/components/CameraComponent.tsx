@@ -27,23 +27,30 @@ const CameraComponent = ({ onImageCapture, onClose }: { onImageCapture: (url: st
     }, []);
 
     const saveImage = async () => {
+        console.log("saveImage function called");
         if (image) {
             try {
+                console.log("Uploading image to Firebase Storage");
                 const storageRef = ref(storage, `itemImages/${Date.now()}.jpg`);
                 await uploadString(storageRef, image, 'data_url');
+
+                console.log("Getting download URL");
                 const downloadURL = await getDownloadURL(storageRef);
 
-                // Save the image URL to Firestore
+                console.log("Saving image URL to Firestore");
                 await addDoc(collection(db, "itemImages"), {
                     url: downloadURL,
                     createdAt: new Date().toISOString()
                 });
 
+                console.log("Image saved successfully");
                 onImageCapture(downloadURL);
                 onClose(); // This should close the modal
             } catch (error) {
                 console.error("Error saving image: ", error);
             }
+        } else {
+            console.log("No image to save");
         }
     };
 

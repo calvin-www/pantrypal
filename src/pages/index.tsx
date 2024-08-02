@@ -15,7 +15,7 @@ import { TableView } from "../components/TableView";
 import CameraComponent from "../components/CameraComponent";
 import { Item } from "../types/item";
 import { db } from "../firebase";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, onSnapshot, addDoc } from "firebase/firestore";
 import CameraExample from "../components/CameraExample"; // Import the CameraExample component
 
 
@@ -130,11 +130,11 @@ function Home() {
   );
 
   const [isCameraOpen, setIsCameraOpen] = useState(false);
-  const handleImageCapture = (url: string) => {
-      closeCamera();
-    console.log('Image captured:', url);
-    // You can add more logic here, such as updating state or sending the image to a server
-  };
+  const handleImageCapture = useCallback((url: string) => {
+    console.log('Image captured and saved:', url);
+    closeCamera();
+  }, []);
+  
   const openCamera = () => setIsCameraOpen(true);
   const closeCamera = () => setIsCameraOpen(false);
 
