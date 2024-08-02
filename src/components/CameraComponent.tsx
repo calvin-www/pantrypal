@@ -4,7 +4,8 @@ import { Paper, Button, ActionIcon } from '@mantine/core';
 import { IconCamera, IconCameraRotate, IconArrowRight, IconArrowBack } from '@tabler/icons-react';
 import Image from 'next/image';
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
-import { storage  } from "../firebase";
+import { storage,db } from "../firebase";
+import { collection, onSnapshot, addDoc, getDocs, query, where, deleteDoc, doc } from "firebase/firestore";
 
 
 const CameraComponent = ({ onImageCapture, onClose }: { onImageCapture: (url: string) => void, onClose: () => void }) => {
@@ -31,10 +32,18 @@ const CameraComponent = ({ onImageCapture, onClose }: { onImageCapture: (url: st
                 const storageRef = ref(storage, `item-images/${Date.now()}.jpg`);
                 await uploadString(storageRef, image, 'data_url');
                 const downloadURL = await getDownloadURL(storageRef);
+
+                // Save the image URL to Firestore
+                await addDoc(collection(db, "itemImages"), {
+                    url: downloadURL,
+                    createdAt: new Date().toISOString()
+                });
+
+                // Call onImageCapture with the download URL
                 onImageCapture(downloadURL);
-                onClose(); // Now this should work correctly
+                onClose();
             } catch (error) {
-                console.error("Error uploading image: ", error);
+                console.error("Error saving image: ", error);
             }
         }
     };
