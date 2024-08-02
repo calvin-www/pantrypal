@@ -233,7 +233,7 @@ function Home() {
           },
         }}
       >
-        <CameraComponent onClose={closeCamera} />
+        <CameraComponent />
       </Modal>
     </div>
   );
