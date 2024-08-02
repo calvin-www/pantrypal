@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { Camera } from 'react-camera-pro';
 import { Paper, Button, ActionIcon } from '@mantine/core';
 import { IconCamera, IconCameraRotate } from '@tabler/icons-react';
+import Image from 'next/image';
 
 interface CameraComponentProps {
     onClose: () => void;
@@ -32,7 +33,7 @@ const CameraComponent: React.FC<CameraComponentProps> = ({ onClose }) => {
 
     return (
         <div className="flex flex-col h-full">
-            <Paper className="flex-grow overflow-hidden rounded-lg m-4">
+            <Paper className="flex-grow overflow-hidden rounded-lg m-4" style={{ height: 'calc(100vh - 200px)' }}>
                 <Camera
                     ref={camera}
                     errorMessages={errorMessages}
@@ -50,7 +51,7 @@ const CameraComponent: React.FC<CameraComponentProps> = ({ onClose }) => {
             </Paper>
             {image && (
                 <Paper className="m-4 p-4">
-                    <img src={image} alt="Taken photo" className="w-full" />
+                    <Image src={image} alt="Taken photo" layout="responsive" width={16} height={9} />
                 </Paper>
             )}
         </div>
