@@ -3,42 +3,41 @@ import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognitio
 import { db, storage } from '../firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
-import { Button } from '@mantine/core';
+import { Button, Loader } from '@mantine/core';
 
 interface VoiceRecognitionComponentProps {
     onClose: () => void;
 }
 
 const VoiceRecognitionComponent: React.FC<VoiceRecognitionComponentProps> = ({ onClose }) => {
-    const [isListening, setIsListening] = useState(false);
+    const [isListening, setIsListening] = useState(true);
     const { transcript, resetTranscript, browserSupportsSpeechRecognition } = useSpeechRecognition();
 
     useEffect(() => {
         if (!browserSupportsSpeechRecognition) {
             console.error("Browser doesn't support speech recognition.");
+            return;
         }
-    }, [browserSupportsSpeechRecognition]);
 
-    const startListening = () => {
-        setIsListening(true);
         SpeechRecognition.startListening({ continuous: true })
-            .then(() => console.log("Listening started"))
+            .then(() => {
+                console.log("Listening started");
+                setIsListening(true);
+            })
             .catch((error) => console.error("Error starting to listen:", error));
-    };
 
-    const stopListening = () => {
-        setIsListening(false);
-        SpeechRecognition.stopListening()
-            .then(() => console.log("Listening stopped"))
-            .catch((error) => console.error("Error stopping listening:", error));
-    };
+        return () => {
+            SpeechRecognition.stopListening()
+                .then(() => console.log("Listening stopped"))
+                .catch((error) => console.error("Error stopping listening:", error));
+        };
+    }, [browserSupportsSpeechRecognition]);
 
     const handleUploadTranscript = async () => {
         if (transcript) {
             try {
                 console.log('Starting transcript upload...');
 
-                // Upload transcript to Firebase Storage
                 const storageRef = ref(storage, `transcripts/${Date.now()}.txt`);
                 console.log('Uploading to storage...');
                 await uploadString(storageRef, transcript);
@@ -46,7 +45,6 @@ const VoiceRecognitionComponent: React.FC<VoiceRecognitionComponentProps> = ({ o
                 console.log('Getting download URL...');
                 const downloadURL = await getDownloadURL(storageRef);
 
-                // Save reference to Firestore
                 console.log('Saving to Firestore...');
                 await addDoc(collection(db, 'transcripts'), {
                     text: transcript,
@@ -56,21 +54,24 @@ const VoiceRecognitionComponent: React.FC<VoiceRecognitionComponentProps> = ({ o
 
                 console.log('Transcript uploaded successfully');
                 resetTranscript();
-                onClose(); // Close the modal after successful upload
+                onClose();
             } catch (error) {
                 console.error('Error uploading transcript:', error);
-                // You might want to show an error message to the user here
             }
         } else {
             console.log('No transcript to upload');
         }
     };
+
     return (
-        <div>
-            <Button onClick={isListening ? stopListening : startListening}>
-                {isListening ? 'Stop Listening' : 'Start Listening'}
-            </Button>
-            <p>{transcript}</p>
+        <div className="flex flex-col items-center space-y-4">
+            {isListening && (
+                <div className="flex items-center space-x-2">
+                    <Loader size="sm" />
+                    <span>Listening...</span>
+                </div>
+            )}
+            <p className="text-center">{transcript}</p>
             <Button onClick={handleUploadTranscript} disabled={!transcript}>
                 Upload Transcript
             </Button>
