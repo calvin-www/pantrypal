@@ -8,6 +8,7 @@ import {
 import { AppProps } from "next/app";
 import "@mantine/core/styles.css";
 import "../globals.css";
+import "regenerator-runtime/runtime";
 
 const theme = createTheme({
   fontFamily: "JetBrains Mono, monospace",

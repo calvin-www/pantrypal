@@ -7,6 +7,7 @@ import {
   Stack,
   ScrollArea,
   Box,
+  rgba,
 } from "@mantine/core";
 import InputForm from "../components/InputForm";
 import ItemList from "../components/ItemList";
@@ -14,8 +15,12 @@ import { SearchBar } from "../components/SearchBar";
 import { TableView } from "../components/TableView";
 import CameraComponent from "../components/CameraComponent";
 import { Item } from "../types/item";
-import { db } from "../firebase";
 import { collection, onSnapshot, addDoc } from "firebase/firestore";
+import { IconCamera,IconMicrophone } from "@tabler/icons-react";
+import "regenerator-runtime/runtime";
+import { db } from '../firebase';
+import VoiceRecognitionComponent from '../components/VoiceRecognitionComponent';
+
 
 
 function Home() {
@@ -130,16 +135,17 @@ function Home() {
 
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const handleImageCapture = useCallback((url: string) => {
-    console.log('Image captured and saved:', url);
+    console.log("Image captured and saved:", url);
     closeCamera();
   }, []);
 
   const openCamera = () => setIsCameraOpen(true);
   const closeCamera = () => setIsCameraOpen(false);
 
-  const [isCameraExampleOpen, setIsCameraExampleOpen] = useState(false); // New state for CameraExample modal
-  const openCameraExample = () => setIsCameraExampleOpen(true); // New function to open CameraExample modal
-  const closeCameraExample = () => setIsCameraExampleOpen(false);
+  const [isVoiceRecognitionOpen, setIsVoiceRecognitionOpen] = useState(false);
+  const openVoiceRecognition = () => setIsVoiceRecognitionOpen(true);
+  const closeVoiceRecognition = () => setIsVoiceRecognitionOpen(false);
+
   return (
     <div className="bg-[#1f1f1f] min-h-screen flex flex-col">
       <div className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 p-4">
@@ -210,41 +216,84 @@ function Home() {
                 p="xl"
                 className="bg-[#242424] border-2 border-[#3b3b3b]"
               >
-                <Button onClick={openCamera} fullWidth>
-                  Open Camera
-                </Button>
+                <SimpleGrid cols={2} spacing="md">
+                  <Button
+                      onClick={openCamera}
+                      size="xl"
+                      styles={() => ({
+                        root: {
+                          height: "120px",
+                          "&:hover": {
+                            backgroundColor: rgba("#228be6", 0.9), // Slightly darker blue
+                          },
+                        },
+                      })}
+                  >
+                    <div className="flex flex-col items-center">
+                      <IconCamera size={48}/>
+                    </div>
+                  </Button>
+                  <Button
+                      onClick={openVoiceRecognition}
+                      size="xl"
+                      styles={() => ({
+                        root: {
+                          height: "120px",
+                          "&:hover": {
+                            backgroundColor: rgba("#228be6", 0.9),
+                          },
+                        },
+                      })}
+                  >
+                    <div className="flex flex-col items-center">
+                      <IconMicrophone size={48}/>
+                    </div>
+                  </Button>
+                </SimpleGrid>
               </Paper>
               <Paper
                   shadow="lg"
                   radius="lg"
                   p="xl"
                   className="bg-[#242424] border-2 border-[#3b3b3b]"
-              >
-                <Button onClick={openCameraExample} fullWidth>
-                  Open Camera Example
-                </Button>
-              </Paper>
+              ></Paper>
             </Stack>
           </SimpleGrid>
         </div>
       </div>
       <Modal
-          opened={isCameraOpen}
+        opened={isCameraOpen}
+        onClose={closeCamera}
+        size="xl"
+        title="Camera"
+        fullScreen
+        styles={{
+          inner: { padding: 0 },
+          body: {
+            padding: 0,
+            height: "100vh",
+            display: "flex",
+            flexDirection: "column",
+          },
+        }}
+      >
+        <CameraComponent
+          onImageCapture={handleImageCapture}
           onClose={closeCamera}
-          size="xl"
-          title="Camera"
-          fullScreen
+        />
+      </Modal>
+      <Modal
+          opened={isVoiceRecognitionOpen}
+          onClose={closeVoiceRecognition}
+          size="md"
+          title="Voice Recognition"
           styles={{
-            inner: { padding: 0 },
             body: {
-              padding: 0,
-              height: "100vh",
-              display: "flex",
-              flexDirection: "column",
+              padding: "1rem",
             },
           }}
       >
-        <CameraComponent onImageCapture={handleImageCapture} onClose={closeCamera} />
+        <VoiceRecognitionComponent onClose={closeVoiceRecognition} />
       </Modal>
     </div>
   );

@@ -3,7 +3,7 @@ import { useViewportSize } from '@mantine/hooks';
 import { TextInput, MultiSelect, Select, Group, Box, Button, SegmentedControl, Flex, ActionIcon } from '@mantine/core';
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from '../firebase';
-import { IconSearch, IconArrowUp, IconArrowDown, IconX, IconAbc, IconRuler, IconClock } from '@tabler/icons-react';
+import { IconSearch, IconArrowUp, IconArrowDown, IconX, IconAbc, IconHash, IconClock } from '@tabler/icons-react';
 
 interface SearchBarProps {
     onViewChange: (newView: 'card' | 'list') => void;
@@ -250,7 +250,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearchAndSort, onViewCha
                                             onClick={() => handleSortChange('amount')}
                                             style={{backgroundColor: sortBy === 'amount' ? "#3983F5" : "#242424"}}
                                         >
-                                            <IconRuler size={20} />
+                                            <IconHash size={20} />
                                         </ActionIcon>
                                         <ActionIcon
                                             size="lg"
