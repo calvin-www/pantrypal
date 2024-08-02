@@ -134,7 +134,7 @@ function Home() {
     console.log('Image captured and saved:', url);
     closeCamera();
   }, []);
-  
+
   const openCamera = () => setIsCameraOpen(true);
   const closeCamera = () => setIsCameraOpen(false);
 
