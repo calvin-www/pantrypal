@@ -201,6 +201,11 @@ function Home() {
             onClose={closeCamera}
             size="xl"
             title="Camera"
+            fullScreen
+            styles={{
+              inner: { padding: 0 },
+              body: { padding: 0, height: '100vh', display: 'flex', flexDirection: 'column' },
+            }}
         >
           <CameraComponent onClose={closeCamera} />
         </Modal>
