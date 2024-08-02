@@ -13,7 +13,6 @@ import { TableView } from "../components/TableView";
 import { Item } from "../types/item";
 import { db } from "../firebase";
 import { collection, onSnapshot } from "firebase/firestore";
-import { useViewportSize } from '@mantine/hooks';
 
 function Home() {
   const [refresh, setRefresh] = useState(false);
@@ -21,7 +20,6 @@ function Home() {
   const [filteredAndSortedItems, setFilteredAndSortedItems] = useState<Item[]>([]);
   const [sortOption, setSortOption] = useState<string>('name');
   const [isCardView, setIsCardView] = useState(true);
-  const { width } = useViewportSize();
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "items"), (snapshot) => {
@@ -82,8 +80,21 @@ function Home() {
       } else {
         const aValue = a[sortBy as keyof Item];
         const bValue = b[sortBy as keyof Item];
-        if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
-        if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+
+        if (aValue === undefined && bValue === undefined) return 0;
+        if (aValue === undefined) return sortOrder === 'asc' ? 1 : -1;
+        if (bValue === undefined) return sortOrder === 'asc' ? -1 : 1;
+
+        if (sortBy === 'amount') {
+          const aAmount = parseFloat(aValue as string);
+          const bAmount = parseFloat(bValue as string);
+          return sortOrder === 'asc' ? aAmount - bAmount : bAmount - aAmount;
+        }
+
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          return sortOrder === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+        }
+
         return 0;
       }
     });
@@ -95,17 +106,17 @@ function Home() {
   return (
       <div className="bg-[#1f1f1f] min-h-screen flex flex-col">
         <div className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 p-4">
-          <h1 className="text-2xl font-bold text-white max-w-[1400px] mx-auto px-4">Item Tracker!!</h1>
+          <h1 className="text-2xl font-bold text-white max-w-[1400px] mx-auto px-4">PantryPal!</h1>
         </div>
-        <div className="flex-grow flex justify-center items-start py-4">
-          <div className="w-full max-w-[1400px] px-4">
+        <div className="flex-grow flex justify-center items-start py-4 overflow-x-auto">
+          <div className="w-full max-w-[1400px] px-4 min-w-[320px]">
             <SimpleGrid cols={{base: 1, md: 4}} spacing="md">
               <Paper
                   shadow="lg"
                   radius="lg"
                   p="xl"
                   className="bg-[#242424] border-2 border-[#3b3b3b] col-span-3"
-                  style={{height: 'calc(100vh - 8rem)'}}
+                  style={{height: 'calc(100vh - 8rem)', minWidth: '300px'}}
               >
                 <Stack gap="md" style={{height: '100%'}}>
                   <Box className="bg-[#2c2c2c] p-4 rounded-lg">

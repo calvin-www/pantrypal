@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useViewportSize } from '@mantine/hooks';
-import { TextInput, MultiSelect, Select, Group, Box, Button, SegmentedControl, Flex, ActionIcon, Transition } from '@mantine/core';
+import { TextInput, MultiSelect, Select, Group, Box, Button, SegmentedControl, Flex, ActionIcon } from '@mantine/core';
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from '../firebase';
 import { IconSearch, IconArrowUp, IconArrowDown, IconX } from '@tabler/icons-react';
@@ -31,7 +31,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearchAndSort, onViewCha
 
     useEffect(() => {
         onSearchAndSort('', [], sortBy, sortOrder);
-    }, []);
+    }, [onSearchAndSort, onViewChange, sortBy, sortOrder]);
 
     useEffect(() => {
         const categoriesCollection = collection(db, 'categories');

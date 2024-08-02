@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Combobox, InputBase, useCombobox, Transition } from '@mantine/core';
 import { collection, onSnapshot, addDoc, getDocs, query, where, deleteDoc, doc } from "firebase/firestore";
 import { db } from '../firebase';
-import { getColorForCategory, updateLocalCategoryColors, getLocalCategoryColors } from "../utils/categoryColorutils";
+import { getColorForCategory, updateLocalCategoryColors } from "../utils/categoryColorutils";
 
 interface CategoryComboboxProps {
     onCategorySelect: (category: string, color: string) => void;
@@ -26,7 +26,11 @@ export const CategoryCombobox: React.FC<CategoryComboboxProps> = ({ onCategorySe
 
 
     useEffect(() => {
-        // seedCategories();
+        // Initially load from local storage
+        const localCategories = getLocalCategories();
+        setCategories(localCategories);
+
+        // Set up Firestore listener for updates
         const categoriesCollection = collection(db, 'categories');
         const unsubscribe = onSnapshot(categoriesCollection, (snapshot) => {
             const categoriesList = snapshot.docs.map(doc => ({
@@ -34,17 +38,18 @@ export const CategoryCombobox: React.FC<CategoryComboboxProps> = ({ onCategorySe
                 name: doc.data().name,
                 color: doc.data().color
             }));
-            setCategories(categoriesList);
 
-            // Store categories in local storage
-            localStorage.setItem('categories', JSON.stringify(categoriesList));
+            // Update state only if there are changes
+            if (JSON.stringify(categoriesList) !== JSON.stringify(localCategories)) {
+                setCategories(categoriesList);
+                localStorage.setItem('categories', JSON.stringify(categoriesList));
 
-            // Update local storage with the latest category colors
-            const colorUpdates = categoriesList.reduce((acc, category) => {
-                acc[category.name] = category.color;
-                return acc;
-            }, {} as Record<string, string>);
-            updateLocalCategoryColors(colorUpdates);
+                const colorUpdates = categoriesList.reduce((acc, category) => {
+                    acc[category.name] = category.color;
+                    return acc;
+                }, {} as Record<string, string>);
+                updateLocalCategoryColors(colorUpdates);
+            }
         });
 
         return () => unsubscribe();
@@ -119,7 +124,7 @@ export const CategoryCombobox: React.FC<CategoryComboboxProps> = ({ onCategorySe
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
-                            handleDeleteCategory(category.name);
+                            handleDeleteCategory(category.name)
                         }}
                         className="text-red-500 hover:text-red-700"
                     >

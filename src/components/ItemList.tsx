@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Grid, Loader } from "@mantine/core";
 import { deleteDoc, doc } from "firebase/firestore";
 import { db } from "../firebase";
@@ -14,7 +14,6 @@ interface ItemListProps {
 }
 
 const ItemList: React.FC<ItemListProps> = ({ initialItems }) => {
-    const [items, setItems] = useState<Item[]>(initialItems);
     const [editedItem, setEditedItem] = useState<Item>({
         id: "",
         name: "",
@@ -22,9 +21,12 @@ const ItemList: React.FC<ItemListProps> = ({ initialItems }) => {
         categories: [],
         createdAt: "",
     });
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [categoryColorMap, setCategoryColorMap] = useState<Map<string, string>>(
+        const [items, setItems] = useState<Item[]>(initialItems);
+        const [isModalOpen, setIsModalOpen] = useState(false);
+        const [loading, ] = useState(false);
+        const [isWideScreen, setIsWideScreen] = useState(false);
+
+    const [, setCategoryColorMap] = useState<Map<string, string>>(
         new Map(),
     );
 
@@ -35,6 +37,16 @@ const ItemList: React.FC<ItemListProps> = ({ initialItems }) => {
     useEffect(() => {
         const localColors = getLocalCategoryColors();
         setCategoryColorMap(new Map(Object.entries(localColors)));
+    }, []);
+
+    useEffect(() => {
+        const mediaQuery = window.matchMedia('(min-width: 768px)');
+        setIsWideScreen(mediaQuery.matches);
+
+        const handler = (e: MediaQueryListEvent) => setIsWideScreen(e.matches);
+        mediaQuery.addEventListener('change', handler);
+
+        return () => mediaQuery.removeEventListener('change', handler);
     }, []);
 
     const deleteItem = useCallback(async (id: string) => {
@@ -50,17 +62,6 @@ const ItemList: React.FC<ItemListProps> = ({ initialItems }) => {
         setIsModalOpen(true);
     }, []);
 
-    const memoizedItems = useMemo(() => {
-        return items.map((item) => (
-            <Grid.Col key={item.id} span={4} style={{ minWidth: 200 }}>
-                <ItemCard
-                    item={item}
-                    onEdit={handleEdit}
-                    onDelete={deleteItem}
-                />
-            </Grid.Col>
-        ));
-    }, [items, handleEdit, deleteItem]);
 
     if (loading) {
         return (
@@ -69,12 +70,36 @@ const ItemList: React.FC<ItemListProps> = ({ initialItems }) => {
             </div>
         );
     }
+    const renderWideScreenView = () => (
+        <Grid>
+            {items.map((item) => (
+                <Grid.Col key={item.id} span={4} style={{ minWidth: 200 }}>
+                    <ItemCard
+                        item={item}
+                        onEdit={handleEdit}
+                        onDelete={deleteItem}
+                    />
+                </Grid.Col>
+            ))}
+        </Grid>
+    );
 
+    const renderNarrowScreenView = () => (
+        <div className="space-y-4">
+            {items.map((item) => (
+                <ItemCard
+                    key={item.id}
+                    item={item}
+                    onEdit={handleEdit}
+                    onDelete={deleteItem}
+                    isNarrowScreen={true}
+                />
+            ))}
+        </div>
+    );
     return (
         <div className="w-full">
-            <Grid>
-                {memoizedItems}
-            </Grid>
+            {isWideScreen ? renderWideScreenView() : renderNarrowScreenView()}
 
             <EditModal
                 item={editedItem}

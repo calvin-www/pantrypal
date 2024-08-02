@@ -1,7 +1,7 @@
 export interface Item {
-    id: string;
+    id?: string;
     name: string;
     amount: string;
-    categories: { name: string }[];
+    categories: { name: string; color: string }[];
     createdAt: string;
 }

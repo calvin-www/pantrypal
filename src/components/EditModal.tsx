@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Modal, Grid, TextInput, NumberInput, Button, Text, Badge } from "@mantine/core";
+import { Modal, Grid, TextInput, NumberInput, Button, Text, Badge, Title } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
 import { updateDoc, doc } from "firebase/firestore";
 import { db } from "../firebase";
 import { Item } from "../types/item";
 import { CategoryCombobox } from "./CategoryCombobox";
-import { getColorForCategory, updateLocalCategoryColors, getLocalCategoryColors } from "../utils/categoryColorutils";
+import { getLocalCategoryColors } from "../utils/categoryColorutils";
 
 interface EditModalProps {
     item: Item;
@@ -42,7 +42,7 @@ const EditModal: React.FC<EditModalProps> = ({
     }, [editedItem, setIsModalOpen]);
 
     const handleAddCategory = (category: string, color: string) => {
-        if (category && typeof category === 'string') {
+        if (category ) {
             setEditedItem({
                 ...editedItem,
                 categories: [
@@ -64,6 +64,11 @@ const EditModal: React.FC<EditModalProps> = ({
             opened={isModalOpen}
             size="md"
             onClose={() => setIsModalOpen(false)}
+            title={
+                <Title order={3} className="text-white">
+                    Update {editedItem.name}
+                </Title>
+            }
         >
             <Grid>
                 <Grid.Col span={12}>
