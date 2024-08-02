@@ -31,7 +31,7 @@ const CameraComponent: React.FC = () => {
 
     return (
         <div className="flex flex-col h-full">
-            <Paper className="flex-grow overflow-hidden rounded-lg m-4" style={{ height: 'calc(100vh - 150px)' }}>
+            <Paper className="flex-grow overflow-hidden rounded-lg m-4 shadow-md" style={{ height: 'calc(100vh - 200px)' }}>
                 <Camera
                     ref={camera}
                     errorMessages={errorMessages}
@@ -39,7 +39,7 @@ const CameraComponent: React.FC = () => {
                     numberOfCamerasCallback={setNumberOfCameras}
                 />
             </Paper>
-            <Paper className="p-4 m-4 flex justify-center items-center space-x-4">
+            <Paper className="p-4 m-4 flex justify-center items-center space-x-4 rounded-lg shadow-md">
                 {numberOfCameras > 1 && (
                     <ActionIcon size="xl" radius="xl" variant="filled" color="blue" onClick={switchCamera}>
                         <IconCameraRotate size={24} />
@@ -50,7 +50,7 @@ const CameraComponent: React.FC = () => {
                 </Button>
             </Paper>
             {image && (
-                <Paper className="m-4 p-4">
+                <Paper className="m-4 p-4 rounded-lg shadow-md">
                     <Image src={image} alt="Taken photo" layout="responsive" width={16} height={9} />
                 </Paper>
             )}
