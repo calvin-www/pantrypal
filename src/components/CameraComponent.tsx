@@ -3,8 +3,11 @@ import { Camera } from 'react-camera-pro';
 import { Paper, Button, ActionIcon } from '@mantine/core';
 import { IconCamera, IconCameraRotate, IconArrowRight, IconArrowBack } from '@tabler/icons-react';
 import Image from 'next/image';
+import { ref, uploadString, getDownloadURL } from "firebase/storage";
+import { storage  } from "../firebase";
 
-const CameraComponent: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+
+const CameraComponent = ({ onImageCapture, onClose }: { onImageCapture: (url: string) => void, onClose: () => void }) => {
     const camera = useRef<any>(null);
     const [image, setImage] = useState<string | null>(null);
     const [numberOfCameras, setNumberOfCameras] = useState(0);
@@ -22,10 +25,18 @@ const CameraComponent: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         }
     }, []);
 
-    const saveImage = () => {
-        // Implement image saving logic here
-        console.log('Image saved');
-        onClose(); // Close the modal after saving
+    const saveImage = async () => {
+        if (image) {
+            try {
+                const storageRef = ref(storage, `item-images/${Date.now()}.jpg`);
+                await uploadString(storageRef, image, 'data_url');
+                const downloadURL = await getDownloadURL(storageRef);
+                onImageCapture(downloadURL);
+                onClose(); // Now this should work correctly
+            } catch (error) {
+                console.error("Error uploading image: ", error);
+            }
+        }
     };
 
     const deleteImage = () => {
