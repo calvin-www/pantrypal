@@ -29,7 +29,7 @@ const CameraComponent = ({ onImageCapture, onClose }: { onImageCapture: (url: st
     const saveImage = async () => {
         if (image) {
             try {
-                const storageRef = ref(storage, `item-images/${Date.now()}.jpg`);
+                const storageRef = ref(storage, `itemImages/${Date.now()}.jpg`);
                 await uploadString(storageRef, image, 'data_url');
                 const downloadURL = await getDownloadURL(storageRef);
 

@@ -131,7 +131,7 @@ function Home() {
 
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const handleImageCapture = (url: string) => {
-    // Handle the captured image URL here
+      closeCamera();
     console.log('Image captured:', url);
     // You can add more logic here, such as updating state or sending the image to a server
   };
@@ -245,7 +245,7 @@ function Home() {
             },
           }}
       >
-        <CameraComponent onClose={closeCamera} onImageCapture={handleImageCapture} />
+        <CameraComponent onImageCapture={handleImageCapture} onClose={closeCamera} />
       </Modal>
       <Modal
           opened={isCameraExampleOpen}
