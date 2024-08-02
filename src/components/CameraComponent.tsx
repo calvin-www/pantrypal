@@ -3,10 +3,8 @@ import { Camera } from 'react-camera-pro';
 import { Paper, Button, ActionIcon } from '@mantine/core';
 import { IconCamera, IconCameraRotate, IconArrowRight, IconArrowBack } from '@tabler/icons-react';
 import Image from 'next/image';
-import fs from 'fs/promises';
-import path from 'path';
 
-const CameraComponent: React.FC = () => {
+const CameraComponent: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const camera = useRef<any>(null);
     const [image, setImage] = useState<string | null>(null);
     const [numberOfCameras, setNumberOfCameras] = useState(0);
@@ -24,21 +22,10 @@ const CameraComponent: React.FC = () => {
         }
     }, []);
 
-    const saveImage = async () => {
-        if (image) {
-            const buffer = Buffer.from(image.replace(/^data:image\/\w+;base64,/, ''), 'base64');
-            const imagesDir = path.join(process.cwd(), 'public', 'images');
-            const fileName = `image_${Date.now()}.jpg`;
-            const filePath = path.join(imagesDir, fileName);
-
-            try {
-                await fs.mkdir(imagesDir, { recursive: true });
-                await fs.writeFile(filePath, buffer);
-                console.log('Image saved:', filePath);
-            } catch (error) {
-                console.error('Error saving image:', error);
-            }
-        }
+    const saveImage = () => {
+        // Implement image saving logic here
+        console.log('Image saved');
+        onClose(); // Close the modal after saving
     };
 
     const deleteImage = () => {
@@ -57,15 +44,13 @@ const CameraComponent: React.FC = () => {
             {!image ? (
                 <>
                     <Paper className="flex-grow overflow-hidden rounded-lg m-4 shadow-md" style={{ height: 'calc(100vh - 250px)' }}>
-                        <div className="w-full h-full flex items-center justify-center">
-                            <div className="w-4/5 h-4/5">
-                                <Camera
-                                    ref={camera}
-                                    errorMessages={errorMessages}
-                                    aspectRatio="cover"
-                                    numberOfCamerasCallback={setNumberOfCameras}
-                                />
-                            </div>
+                        <div style={{ width: '100%', height: '100%' }}>
+                            <Camera
+                                ref={camera}
+                                errorMessages={errorMessages}
+                                aspectRatio={16 / 9}
+                                numberOfCamerasCallback={setNumberOfCameras}
+                            />
                         </div>
                     </Paper>
                     <Paper
