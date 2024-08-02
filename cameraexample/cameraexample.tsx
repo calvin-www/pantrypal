@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import styled from 'styled-components';
+// import styled from 'styled-components';
 
 import { Camera, CameraType } from 'react-camera-pro';
 
