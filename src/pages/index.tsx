@@ -218,22 +218,22 @@ function Home() {
         </div>
       </div>
       <Modal
-        opened={isCameraOpen}
-        onClose={closeCamera}
-        size="xl"
-        title="Camera"
-        fullScreen
-        styles={{
-          inner: { padding: 0 },
-          body: {
-            padding: 0,
-            height: "100vh",
-            display: "flex",
-            flexDirection: "column",
-          },
-        }}
+          opened={isCameraOpen}
+          onClose={closeCamera}
+          size="xl"
+          title="Camera"
+          fullScreen
+          styles={{
+            inner: { padding: 0 },
+            body: {
+              padding: 0,
+              height: "100vh",
+              display: "flex",
+              flexDirection: "column",
+            },
+          }}
       >
-        <CameraComponent />
+        <CameraComponent onClose={closeCamera} />
       </Modal>
     </div>
   );
