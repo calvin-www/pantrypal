@@ -42,21 +42,16 @@ const CameraComponent: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     return (
         <div className="flex flex-col h-full">
             {!image ? (
-                <>
-                    <Paper className="flex-grow overflow-hidden rounded-lg m-4 shadow-md" style={{ height: 'calc(100vh - 250px)' }}>
-                        <div style={{ width: '100%', height: '100%' }}>
-                            <Camera
-                                ref={camera}
-                                errorMessages={errorMessages}
-                                aspectRatio={16 / 9}
-                                numberOfCamerasCallback={setNumberOfCameras}
-                            />
-                        </div>
-                    </Paper>
-                    <Paper
-                        shadow="lg"
-                        radius="lg"
-                        className="p-4 m-4 flex justify-center items-center space-x-4 bg-[#242424] border-2 border-[#3b3b3b]">
+                <Paper className="flex-grow overflow-hidden rounded-lg m-4 shadow-md relative" style={{ height: 'calc(100vh - 8rem)' }}>
+                    <div style={{ width: '100%', height: '100%' }}>
+                        <Camera
+                            ref={camera}
+                            errorMessages={errorMessages}
+                            aspectRatio={16 / 9}
+                            numberOfCamerasCallback={setNumberOfCameras}
+                        />
+                    </div>
+                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex justify-center items-center space-x-4">
                         {numberOfCameras > 1 && (
                             <ActionIcon size="xl" radius="xl" variant="filled" color="blue" onClick={switchCamera}>
                                 <IconCameraRotate size={24} />
@@ -65,8 +60,8 @@ const CameraComponent: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                         <Button size="xl" radius="xl" onClick={takePhoto}>
                             <IconCamera size={24} />
                         </Button>
-                    </Paper>
-                </>
+                    </div>
+                </Paper>
             ) : (
                 <Paper
                     shadow="lg"
