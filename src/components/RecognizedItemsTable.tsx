@@ -42,43 +42,43 @@ export const RecognizedItemsTable: React.FC<RecognizedItemsTableProps> = ({ item
               <Table.Th>Categories</Table.Th>
             </Table.Tr>
           </Table.Thead>
-<Table.Tbody>
-  {items.map((item, index) => (
-    <Table.Tr key={index}>
-      <Table.Td>{item.name.replace(/^- /, '')}</Table.Td>
-      <Table.Td>
-        {(() => {
-          const amountMatch = item.name.match(/\((\d+(?:\.\d+)?)\)$/);
-          if (amountMatch) {
-            return parseFloat(amountMatch[1]);
-          }
-          const numericAmount = parseFloat(item.amount);
-          return !isNaN(numericAmount) ? numericAmount : item.amount.split(' ')[0];
-        })()}
-      </Table.Td>
-      <Table.Td>
-        {item.categories.map((category: any, catIndex: number) => (
-          <Badge
-            key={catIndex}
-            color={category.color}
-            variant="light"
-            className="mr-1 mb-1"
-          >
-            {category.name}
-          </Badge>
-        ))}
-      </Table.Td>
-      <Table.Td>
-        <ActionIcon onClick={() => handleEdit(index)} className="mr-2">
-          <IconPencil size={18} />
-        </ActionIcon>
-        <ActionIcon onClick={() => handleDelete(index)} color="red">
-          <IconTrash size={18} />
-        </ActionIcon>
-      </Table.Td>
-    </Table.Tr>
-  ))}
-</Table.Tbody>
+            <Table.Tbody>
+                {editableItems.map((item, index) => (
+                    <Table.Tr key={index}>
+                        <Table.Td>{item.name.replace(/^- /, '')}</Table.Td>
+                        <Table.Td>
+                            {(() => {
+                                const amountMatch = item.name.match(/\((\d+(?:\.\d+)?)\)$/);
+                                if (amountMatch) {
+                                    return parseFloat(amountMatch[1]);
+                                }
+                                const numericAmount = parseFloat(item.amount);
+                                return !isNaN(numericAmount) ? numericAmount : item.amount.split(' ')[0];
+                            })()}
+                        </Table.Td>
+                        <Table.Td>
+                            {item.categories.map((category: any, catIndex: number) => (
+                                <Badge
+                                    key={catIndex}
+                                    color={category.color}
+                                    variant="light"
+                                    className="mr-1 mb-1"
+                                >
+                                    {category.name}
+                                </Badge>
+                            ))}
+                        </Table.Td>
+                        <Table.Td>
+                            <ActionIcon onClick={() => handleEdit(index)} className="mr-2">
+                                <IconPencil size={18} />
+                            </ActionIcon>
+                            <ActionIcon onClick={() => handleDelete(index)} color="red">
+                                <IconTrash size={18} />
+                            </ActionIcon>
+                        </Table.Td>
+                    </Table.Tr>
+                ))}
+            </Table.Tbody>
         </Table>
 
         <div className="flex justify-end mt-4">
