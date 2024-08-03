@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { GoogleGenerativeAI, Part } from "@google/generative-ai";
-
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../../firebase';
 // Initialize the Gemini model
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
@@ -25,12 +26,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
     };
 
-    const categories = JSON.parse(req.headers['x-categories'] as string || '[]');
+    const categoriesSnapshot = await getDocs(collection(db, 'categories'));
+    const categories = categoriesSnapshot.docs.map(doc => doc.data());
     const categoryNames = categories.map((cat: any) => cat.name).join(', ');
-
     // Generate content based on the image and categories
     const result = await model.generateContent([
-      `Identify and list the food items in this image. For each item, provide its name and quantity with no units in this format {name(string),amount(float),categories(List[string])}. Use these categories where applicable: ${categoryNames}.`,
+      `Identify and list the food items in this image. For each item, 
+      provide its name and quantity with no units in this format 
+      {name,amount,categories}, where name is a string, amount is 
+      a float, and categories is an array of strings. 
+      Use these categories where applicable: ${categoryNames}.`,
       imagePart,
     ]);
 
