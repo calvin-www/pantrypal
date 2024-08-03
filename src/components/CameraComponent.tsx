@@ -2,8 +2,8 @@ import Image from "next/image";
 import { Paper, Button, ActionIcon, Modal } from "@mantine/core";
 import { Camera } from "react-camera-pro";
 import React, { useRef, useState, useCallback } from "react";
-import { collection, addDoc, query, where, getDocs, updateDoc } from "firebase/firestore";
-import { ref, uploadString, getDownloadURL } from "firebase/storage";
+import { collection, addDoc, query, where, getDocs, updateDoc, deleteDoc, doc } from "firebase/firestore";
+import { ref, uploadString, getDownloadURL, deleteObject } from "firebase/storage";
 import {
   IconCamera,
   IconCameraRotate,
@@ -68,15 +68,23 @@ const CameraComponent = ({
         const downloadURL = await getDownloadURL(storageRef);
 
         console.log("Saving image URL to Firestore");
-        await addDoc(collection(db, "itemImages"), {
+        const docRef = await addDoc(collection(db, "itemImages"), {
           url: downloadURL,
           createdAt: new Date().toISOString(),
         });
 
         console.log("Image saved successfully");
-        handleImageRecognition(downloadURL);
+        await handleImageRecognition(downloadURL);
+
+        // Delete the image from Firestore
+        await deleteDoc(doc(db, "itemImages", docRef.id));
+
+        // Delete the image from Storage
+        await deleteObject(storageRef);
+
+        console.log("Image deleted from database and storage");
       } catch (error) {
-        console.error("Error saving image: ", error);
+        console.error("Error saving or deleting image: ", error);
       }
     } else {
       console.log("No image to save");
@@ -88,13 +96,10 @@ const CameraComponent = ({
   };
 
   const handleImageRecognition = async (imageUrl: string) => {
-    console.log("Starting image recognition for URL:", imageUrl);
     try {
       const response = await fetch("/api/recognizeImage", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ imageUrl }),
       });
 
@@ -103,25 +108,8 @@ const CameraComponent = ({
       }
 
       const data = await response.json();
-      console.log("Raw AI output:", data);
-
-      // Parse the string representation of JSON objects
-      let parsedItems;
-      try {
-        parsedItems = JSON.parse(data.recognizedItems.replace(/'/g, '"'));
-      } catch (parseError) {
-        console.error("Error parsing recognized items:", parseError);
-        parsedItems = [];
-      }
-
-      // Ensure parsedItems is an array
-      const recognizedItems = Array.isArray(parsedItems) ? parsedItems : [parsedItems];
-
-      console.log("Processed recognized items:", recognizedItems);
-
-      setRecognizedItems(recognizedItems);
+      setRecognizedItems(data.recognizedItems);
       setShowConfirmationTable(true);
-      console.log("Recognition complete, showing confirmation table");
     } catch (error) {
       console.error("Error recognizing items in image:", error);
     }
@@ -136,10 +124,8 @@ const CameraComponent = ({
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {
-          // Item doesn't exist, add new item
           await addDoc(itemRef, item);
         } else {
-          // Item exists, update the amount
           const existingItem = querySnapshot.docs[0];
           const existingAmount = parseFloat(existingItem.data().amount) || 0;
           const newAmount = parseFloat(item.amount) || 0;
