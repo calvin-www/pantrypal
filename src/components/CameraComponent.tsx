@@ -7,8 +7,7 @@ import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { IconCamera, IconCameraRotate, IconArrowRight, IconArrowBack } from '@tabler/icons-react';
 import { storage, db } from "../firebase";
 import { RecognizedItemsTable } from "./RecognizedItemsTable";
-import vision from '@google-cloud/vision';
-const client = new vision.ImageAnnotatorClient();
+
 const CameraComponent = ({ onImageCapture, onClose }: { onImageCapture: (url: string) => void, onClose: () => void }) => {
     const camera = useRef<any>(null);
     const [image, setImage] = useState<string | null>(null);
@@ -60,54 +59,33 @@ const CameraComponent = ({ onImageCapture, onClose }: { onImageCapture: (url: st
         setImage(null);
     };
 
-const handleImageRecognition = async (imageUrl: string) => {
-    console.log("Starting image recognition for URL:", imageUrl);
-    try {
-        // Convert image URL to base64
-        console.log("Fetching image and converting to base64");
-        const response = await fetch(imageUrl);
-        const blob = await response.blob();
-        const base64Image = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(blob);
-        });
+    const handleImageRecognition = async (imageUrl: string) => {
+        console.log("Starting image recognition for URL:", imageUrl);
+        try {
+            const response = await fetch('/api/recognizeImage', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ imageUrl }),
+            });
 
-        // Remove the data:image/jpeg;base64, part from the base64 string
-        const base64WithoutPrefix = base64Image.split(',')[1];
-        console.log("Base64 image prepared for API call");
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
 
-        // Call Google Cloud Vision API
-        console.log("Calling Google Cloud Vision API");
-        const [result] = await client.labelDetection({
-            image: { content: base64WithoutPrefix }
-        });
+            const data = await response.json();
+            console.log("Processed recognized items:", data.recognizedItems);
 
-        console.log("API response received:", result);
-
-        const labels = result.labelAnnotations;
-        console.log("Extracted labels:", labels);
-
-        // Process the labels into your desired format
-        const recognizedItems = labels?.map(label => ({
-            name: label.description,
-            amount: '1',
-            categories: []
-        })) || [];
-
-        console.log("Processed recognized items:", recognizedItems);
-
-        // Show results in a table for user confirmation
-        setRecognizedItems(recognizedItems);
-        setShowConfirmationTable(true);
-        console.log("Recognition complete, showing confirmation table");
-    } catch (error) {
-        console.error("Error recognizing items in image:", error);
-    }
-};
+            setRecognizedItems(data.recognizedItems);
+            setShowConfirmationTable(true);
+            console.log("Recognition complete, showing confirmation table");
+        } catch (error) {
+            console.error("Error recognizing items in image:", error);
+        }
+    };
 
     const handleConfirmAndUpload = async (confirmedItems: any[]) => {
-        // Upload confirmed items to the database
         for (const item of confirmedItems) {
             await addDoc(collection(db, "pantryItems"), item);
         }

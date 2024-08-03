@@ -44,30 +44,29 @@ const VoiceRecognitionComponent: React.FC<VoiceRecognitionComponentProps> = ({ o
     };
   }, [browserSupportsSpeechRecognition]);
 
-const handleInterpretTranscript = async () => {
-  if (transcript) {
-    try {
-      const result = await generativeModel.generateContent(
-        `Interpret the following voice command for a pantry tracking app and return a JSON array of operations: "${transcript}"`
-      );
-      if (result.response?.candidates?.[0]?.content) {
-        const content = result.response.candidates[0].content;
-        if (typeof content === 'string') {
-          const interpretedOperations = JSON.parse(content);
-          setOperations(interpretedOperations);
-          setAIInterpretation(content);
+  const handleInterpretTranscript = async () => {
+    if (transcript) {
+      try {
+        const response = await fetch('/api/interpretTranscript', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ transcript }),
+        });
+        const data = await response.json();
+        if (data.interpretedOperations) {
+          setOperations(data.interpretedOperations);
+          setAIInterpretation(JSON.stringify(data.interpretedOperations));
           setShowConfirmation(true);
         } else {
-          console.error('Content is not a string');
+          console.error('No valid content in the response');
         }
-      } else {
-        console.error('No valid content in the response');
+      } catch (error) {
+        console.error('Error interpreting transcript:', error);
       }
-    } catch (error) {
-      console.error('Error interpreting transcript:', error);
     }
-  }
-};
+  };
 
   const handleConfirmOperations = async () => {
     for (const operation of operations) {
