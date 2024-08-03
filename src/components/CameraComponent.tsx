@@ -192,8 +192,8 @@ const CameraComponent = ({
           };
         })
         .filter(Boolean);
-
-      // localStorage.setItem('categories', JSON.stringify(localCategories));
+        localStorage.setItem('categories', JSON.stringify(localCategories));
+        await syncCategoriesToFirebase(localCategories);
 
       console.log("Raw AI output:", data);
       console.log("Parsed recognized items:", parsedItems);

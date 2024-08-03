@@ -11,7 +11,7 @@ interface Item {
 
 interface RecognizedItemsTableProps {
     items: Item[];
-    onConfirm: (items: Item[]) => void;
+    onConfirm: (items: Item[]) => Promise<void>;
     onCancel: () => void;
 }
 
