@@ -114,11 +114,21 @@ const CameraComponent = ({
   };
 
   const handleConfirmAndUpload = async (confirmedItems: any[]) => {
-    for (const item of confirmedItems) {
-      await addDoc(collection(db, "pantryItems"), item);
+    try {
+      for (const item of confirmedItems) {
+        if (item && typeof item === 'object') {
+          await addDoc(collection(db, "pantryItems"), item);
+        } else {
+          console.error("Invalid item:", item);
+        }
+      }
+      if (image) {
+        onImageCapture(image);
+      }
+      onClose();
+    } catch (error) {
+      console.error("Error in handleConfirmAndUpload:", error);
     }
-    onImageCapture(image!);
-    onClose();
   };
 
   const errorMessages = {
@@ -139,6 +149,7 @@ const CameraComponent = ({
               position: "relative",
               width: "100%",
               height: "calc(100vh - 2rem)",
+              overflow: "hidden",
             }}
           >
             <Camera
