@@ -1,17 +1,20 @@
-import React, { useRef, useState, useCallback } from 'react';
-import { Camera } from 'react-camera-pro';
-import { Paper, Button, ActionIcon } from '@mantine/core';
-import { IconCamera, IconCameraRotate, IconArrowRight, IconArrowBack } from '@tabler/icons-react';
 import Image from 'next/image';
+import { Paper, Button, ActionIcon } from '@mantine/core';
+import { Camera } from 'react-camera-pro';
+import React, { useRef, useState, useCallback } from 'react';
+import { collection, addDoc } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
-import { storage,db } from "../firebase";
-import { collection, onSnapshot, addDoc, getDocs, query, where, deleteDoc, doc } from "firebase/firestore";
-
-
+import { IconCamera, IconCameraRotate, IconArrowRight, IconArrowBack } from '@tabler/icons-react';
+import { storage, db } from "../firebase";
+import { RecognizedItemsTable } from "./RecognizedItemsTable";
+import vision from '@google-cloud/vision';
+const client = new vision.ImageAnnotatorClient();
 const CameraComponent = ({ onImageCapture, onClose }: { onImageCapture: (url: string) => void, onClose: () => void }) => {
     const camera = useRef<any>(null);
     const [image, setImage] = useState<string | null>(null);
     const [numberOfCameras, setNumberOfCameras] = useState(0);
+    const [recognizedItems, setRecognizedItems] = useState<any[]>([]);
+    const [showConfirmationTable, setShowConfirmationTable] = useState(false);
 
     const takePhoto = useCallback(() => {
         if (camera.current) {
@@ -44,8 +47,7 @@ const CameraComponent = ({ onImageCapture, onClose }: { onImageCapture: (url: st
                 });
 
                 console.log("Image saved successfully");
-                onImageCapture(downloadURL);
-                onClose(); // This should close the modal
+                handleImageRecognition(downloadURL);
             } catch (error) {
                 console.error("Error saving image: ", error);
             }
@@ -56,6 +58,61 @@ const CameraComponent = ({ onImageCapture, onClose }: { onImageCapture: (url: st
 
     const deleteImage = () => {
         setImage(null);
+    };
+
+const handleImageRecognition = async (imageUrl: string) => {
+    console.log("Starting image recognition for URL:", imageUrl);
+    try {
+        // Convert image URL to base64
+        console.log("Fetching image and converting to base64");
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
+        const base64Image = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+        });
+
+        // Remove the data:image/jpeg;base64, part from the base64 string
+        const base64WithoutPrefix = base64Image.split(',')[1];
+        console.log("Base64 image prepared for API call");
+
+        // Call Google Cloud Vision API
+        console.log("Calling Google Cloud Vision API");
+        const [result] = await client.labelDetection({
+            image: { content: base64WithoutPrefix }
+        });
+
+        console.log("API response received:", result);
+
+        const labels = result.labelAnnotations;
+        console.log("Extracted labels:", labels);
+
+        // Process the labels into your desired format
+        const recognizedItems = labels?.map(label => ({
+            name: label.description,
+            amount: '1',
+            categories: []
+        })) || [];
+
+        console.log("Processed recognized items:", recognizedItems);
+
+        // Show results in a table for user confirmation
+        setRecognizedItems(recognizedItems);
+        setShowConfirmationTable(true);
+        console.log("Recognition complete, showing confirmation table");
+    } catch (error) {
+        console.error("Error recognizing items in image:", error);
+    }
+};
+
+    const handleConfirmAndUpload = async (confirmedItems: any[]) => {
+        // Upload confirmed items to the database
+        for (const item of confirmedItems) {
+            await addDoc(collection(db, "pantryItems"), item);
+        }
+        onImageCapture(image!);
+        onClose();
     };
 
     const errorMessages = {
@@ -103,6 +160,13 @@ const CameraComponent = ({ onImageCapture, onClose }: { onImageCapture: (url: st
                         </ActionIcon>
                     </div>
                 </Paper>
+            )}
+            {showConfirmationTable && (
+                <RecognizedItemsTable
+                    items={recognizedItems}
+                    onConfirm={handleConfirmAndUpload}
+                    onCancel={() => setShowConfirmationTable(false)}
+                />
             )}
         </div>
     );

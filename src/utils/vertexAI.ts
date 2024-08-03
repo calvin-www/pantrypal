@@ -45,7 +45,6 @@ export async function fetchTranscripts(): Promise<string[]> {
 }
 
 export async function processDataForVertexAI(images: string[], transcripts: string[]): Promise<ProcessedData> {
-    // This is a placeholder. Modify this function based on your Vertex AI model's requirements
     return {
         images: images,
         transcripts: transcripts
@@ -87,16 +86,5 @@ export async function analyzeItemsWithVertexAI(): Promise<any> {
     }
 }
 
-// Helper function to handle image processing if needed
-async function processImage(imageUrl: string): Promise<string> {
-    // Implement image processing logic here if required
-    // For now, we're just returning the URL
-    return imageUrl;
-}
-
-// Helper function to handle transcript processing if needed
-function processTranscript(transcript: string): string {
-    // Implement transcript processing logic here if required
-    // For now, we're just returning the original transcript
-    return transcript;
-}
+export const generativeModel = new VertexAI({project: 'expense-tracker-a8458', location: 'us-central1'})
+    .preview.getGenerativeModel({model: 'gemini-1.5-flash'});
