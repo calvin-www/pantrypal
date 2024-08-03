@@ -32,20 +32,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Generate content based on the image and categories
     const result = await model.generateContent([
       `Analyze the image and identify food items. For each item, provide:
-  1. Name of the item
-  2. Estimated quantity as a number (no units)
-  3. Applicable categories from this list: ${categoryNames}, if none are applicable generate new ones.
+1. Name of the item
+2. Estimated quantity as a number (no units)
+3. Applicable categories from this list: ${categoryNames}, if none are applicable generate new ones.
 
-  Format each item as a JSON object:
-  {"name": "item name", "amount": number, "categories": ["category1", "category2", etc.]}
+Format each item as a valid JSON object on a single line:
+{"name": "item name", "amount": number, "categories": ["category1", "category2"]}
 
-  Return a list of these JSON objects, one per line, with no additional text or explanation.
-  Example:
-  {"name": "apple", "amount": 3, "categories": ["fruits", "fresh"]}
-  {"name": "bread", "amount": 1, "categories": ["bakery", "grains"]}`,
+Return a list of these JSON objects, one per line, with no additional text or explanation.
+Example:
+{"name": "apple", "amount": 3, "categories": ["fruits", "fresh"]}
+{"name": "bread", "amount": 1, "categories": ["bakery", "grains"]}`,
       imagePart,
     ]);
-
 
     const generatedResponse = await result.response;
     const text = await generatedResponse.text();
