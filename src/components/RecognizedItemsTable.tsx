@@ -1,106 +1,53 @@
-import React, { useState, useEffect } from 'react';
-import { Table, Checkbox, ActionIcon, Modal } from '@mantine/core';
-import { IconEdit, IconTrash } from '@tabler/icons-react';
-import EditModal from "./EditModal"
-import { db } from '../firebase';
-import { collection, getDocs } from 'firebase/firestore';
-
-interface RecognizedItem {
-  name: string;
-  amount: string;
-  categories: { name: string; color: string }[];
-}
+import React from 'react';
+import { Table, Badge, Button } from '@mantine/core';
 
 interface RecognizedItemsTableProps {
-  items: RecognizedItem[];
-  onConfirm: (items: RecognizedItem[]) => void;
+  items: any[];
+  onConfirm: (items: any[]) => void;
   onCancel: () => void;
 }
 
 export const RecognizedItemsTable: React.FC<RecognizedItemsTableProps> = ({ items, onConfirm, onCancel }) => {
-  const [selectedItems, setSelectedItems] = useState<RecognizedItem[]>(items);
-  const [editingItem, setEditingItem] = useState<RecognizedItem | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [existingCategories, setExistingCategories] = useState<{ name: string; color: string }[]>([]);
-
-  useEffect(() => {
-    const fetchCategories = async () => {
-      const categoriesCollection = collection(db, 'categories');
-      const categoriesSnapshot = await getDocs(categoriesCollection);
-      const categoriesList = categoriesSnapshot.docs.map(doc => ({ name: doc.data().name, color: doc.data().color }));
-      setExistingCategories(categoriesList);
-    };
-    fetchCategories();
-  }, []);
-
-  const toggleItem = (item: RecognizedItem) => {
-    setSelectedItems(prev =>
-        prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]
-    );
-  };
-
-  const handleEdit = (item: RecognizedItem) => {
-    setEditingItem(item);
-    setIsEditModalOpen(true);
-  };
-
-  const handleEditSave = (updatedItem: RecognizedItem) => {
-    setSelectedItems(prev => prev.map(item => item === editingItem ? updatedItem : item));
-    setIsEditModalOpen(false);
-  };
-
   return (
       <>
-        <Table>
-          <thead>
-          <tr>
-            <th>Select</th>
-            <th>Name</th>
-            <th>Amount</th>
-            <th>Categories</th>
-            <th>Actions</th>
-          </tr>
-          </thead>
-          <tbody>
-          {items.map((item, index) => (
-              <tr key={index}>
-                <td>
-                  <Checkbox
-                      checked={selectedItems.includes(item)}
-                      onChange={() => toggleItem(item)}
-                  />
-                </td>
-                <td>{item.name}</td>
-                <td>{item.amount}</td>
-                <td>{item.categories.map(cat => cat.name).join(', ')}</td>
-                <td>
-                  <ActionIcon onClick={() => handleEdit(item)}>
-                    <IconEdit size={16} />
-                  </ActionIcon>
-                </td>
-              </tr>
-          ))}
-          </tbody>
+        <Table striped highlightOnHover>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>Name</Table.Th>
+              <Table.Th>Amount</Table.Th>
+              <Table.Th>Categories</Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {items.map((item, index) => (
+                <Table.Tr key={index}>
+                  <Table.Td>{item.name}</Table.Td>
+                  <Table.Td>{parseFloat(item.amount) || item.amount}</Table.Td>
+                  <Table.Td>
+                    {item.categories.map((category: any, catIndex: number) => (
+                        <Badge
+                            key={catIndex}
+                            color={category.color}
+                            variant="light"
+                            className="mr-1 mb-1"
+                        >
+                          {category.name}
+                        </Badge>
+                    ))}
+                  </Table.Td>
+                </Table.Tr>
+            ))}
+          </Table.Tbody>
         </Table>
 
-        <Modal
-            opened={isEditModalOpen}
-            onClose={() => setIsEditModalOpen(false)}
-            title="Edit Item"
-        >
-          {editingItem && (
-              <EditModal
-                  item={editingItem}
-                  isModalOpen={isEditModalOpen}
-                  setIsModalOpen={setIsEditModalOpen}
-                  onSave={handleEditSave}
-                  existingCategories={existingCategories}
-              />
-          )}
-        </Modal>
-
-        <button onClick={() => onConfirm(selectedItems)}>Confirm</button>
-        <button onClick={onCancel}>Cancel</button>
+        <div className="flex justify-end mt-4">
+          <Button onClick={() => onConfirm(items)} className="mr-2">
+            Confirm
+          </Button>
+          <Button onClick={onCancel} variant="outline">
+            Cancel
+          </Button>
+        </div>
       </>
   );
 };
