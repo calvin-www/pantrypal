@@ -113,30 +113,37 @@ const handleImageRecognition = async (imageUrl: string) => {
     const data = await response.json();
     console.log("Raw recognized items:", data.recognizedItems);
 
-    const localCategories = JSON.parse(localStorage.getItem('categories') || '[]');
+    let localCategories = JSON.parse(localStorage.getItem('categories') || '[]');
     const categoryColorMap: Map<string, string> = new Map(
       localCategories.map((cat: { name: string; color: string }) => [cat.name, cat.color])
     );
 
-    const parsedItems = await Promise.all(data.recognizedItems.map(async (item: any) => {
-      const categories = await Promise.all((item.categories || []).map(async (category: string) => {
+    const parsedItems = data.recognizedItems.map((item: any) => {
+      let parsedItem;
+      try {
+        parsedItem = JSON.parse(item.name);
+      } catch (e) {
+        console.error("Error parsing item:", item);
+        return null;
+      }
+
+      const categories = (parsedItem.categories || []).map((category: string) => {
         if (!categoryColorMap.has(category)) {
           const color = getColorForCategory(category, categoryColorMap);
           const newCategory = { name: category, color };
           localCategories.push(newCategory);
           categoryColorMap.set(category, color);
-          await addDoc(collection(db, 'categories'), newCategory);
         }
-        return { name: category, color: categoryColorMap.get(category) };
-      }));
+        return { name: category, color: categoryColorMap.get(category)! };
+      });
 
       return {
-        name: item.name,
-        amount: item.amount ? item.amount.toString() : '',
-        categories,
+        name: parsedItem.name || '',
+        amount: parsedItem.amount || '',
+        categories: categories,
         createdAt: new Date().toISOString()
       };
-    }));
+    }).filter(Boolean);
 
     localStorage.setItem('categories', JSON.stringify(localCategories));
 
@@ -214,7 +221,7 @@ const handleConfirmAndUpload = async (confirmedItems: any[]) => {
                 <IconUpload size={24} />
               </ActionIcon>
               <ActionIcon
-                  size="xl"
+                  size="3xl"
                   radius="xl"
                   variant="filled"
                   color="blue"
