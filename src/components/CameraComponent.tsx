@@ -96,57 +96,58 @@ const CameraComponent = ({
     setImage(null);
   };
 
-  const handleImageRecognition = async (imageUrl: string) => {
-    console.log("Starting image recognition for URL:", imageUrl);
-    try {
-      const response = await fetch("/api/recognizeImage", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl }),
-      });
+const handleImageRecognition = async (imageUrl: string) => {
+  console.log("Starting image recognition for URL:", imageUrl);
+  try {
+    const response = await fetch("/api/recognizeImage", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imageUrl }),
+    });
 
-      console.log("API response status:", response.status);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+    console.log("API response status:", response.status);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
 
-      const data = await response.json();
-      console.log("Raw recognized items:", data.recognizedItems);
+    const data = await response.json();
+    console.log("Raw recognized items:", data.recognizedItems);
 
-      const localCategories = JSON.parse(localStorage.getItem('categories') || '[]');
-      const categoryColorMap: Map<string, string> = new Map(
-          localCategories.map((cat: { name: string; color: string }) => [cat.name, cat.color])
-      );
-      const parsedItems = await Promise.all(data.recognizedItems.map(async (item: any) => {
-        const categories = await Promise.all(item.categories.map(async (category: string) => {
-          if (!categoryColorMap.has(category)) {
-            const color = getColorForCategory(category, categoryColorMap);
-            const newCategory = { name: category, color };
-            localCategories.push(newCategory);
-            categoryColorMap.set(category, color);
-            await addDoc(collection(db, 'categories'), newCategory);
-          }
-          return { name: category, color: categoryColorMap.get(category) };
-        }));
+    const localCategories = JSON.parse(localStorage.getItem('categories') || '[]');
+    const categoryColorMap: Map<string, string> = new Map(
+      localCategories.map((cat: { name: string; color: string }) => [cat.name, cat.color])
+    );
 
-        return {
-          name: item.name,
-          amount: item.amount.toString(),
-          categories,
-          createdAt: new Date().toISOString()
-        };
+    const parsedItems = await Promise.all(data.recognizedItems.map(async (item: any) => {
+      const categories = await Promise.all((item.categories || []).map(async (category: string) => {
+        if (!categoryColorMap.has(category)) {
+          const color = getColorForCategory(category, categoryColorMap);
+          const newCategory = { name: category, color };
+          localCategories.push(newCategory);
+          categoryColorMap.set(category, color);
+          await addDoc(collection(db, 'categories'), newCategory);
+        }
+        return { name: category, color: categoryColorMap.get(category) };
       }));
 
-      localStorage.setItem('categories', JSON.stringify(localCategories));
+      return {
+        name: item.name,
+        amount: item.amount ? item.amount.toString() : '',
+        categories,
+        createdAt: new Date().toISOString()
+      };
+    }));
 
-      console.log("Raw AI output:", data);
-      console.log("Parsed recognized items:", parsedItems);
-      setRecognizedItems(parsedItems);
-      setShowConfirmationTable(true);
-    } catch (error) {
-      console.error("Error recognizing items in image:", error);
-    }
-  };
+    localStorage.setItem('categories', JSON.stringify(localCategories));
+
+    console.log("Raw AI output:", data);
+    console.log("Parsed recognized items:", parsedItems);
+    setRecognizedItems(parsedItems);
+    setShowConfirmationTable(true);
+  } catch (error) {
+    console.error("Error recognizing items in image:", error);
+  }
+};
 
 const handleConfirmAndUpload = async (confirmedItems: any[]) => {
   console.log("Starting confirm and upload with items:", confirmedItems);
