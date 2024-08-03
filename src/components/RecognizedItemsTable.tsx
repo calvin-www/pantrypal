@@ -19,6 +19,7 @@ export const RecognizedItemsTable: React.FC<RecognizedItemsTableProps> = ({ item
     const [editableItems, setEditableItems] = useState<Item[]>(items);
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<Item | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleEdit = (index: number) => {
         setEditingItem(editableItems[index]);
@@ -82,7 +83,19 @@ export const RecognizedItemsTable: React.FC<RecognizedItemsTableProps> = ({ item
             </Table>
 
             <div className="flex justify-end mt-4">
-                <Button onClick={() => onConfirm(editableItems)} className="mr-2">
+                <Button
+                    onClick={async () => {
+                        setIsLoading(true);
+                        try {
+                            await onConfirm(editableItems);
+                        } finally {
+                            setIsLoading(false);
+                        }
+                    }}
+                    className="mr-2"
+                    loading={isLoading}
+                    disabled={isLoading}
+                >
                     Confirm
                 </Button>
                 <Button onClick={onCancel} variant="outline">

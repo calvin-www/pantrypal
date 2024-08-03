@@ -1,9 +1,23 @@
 import Image from "next/image";
-import { Paper, Button, ActionIcon, Modal } from "@mantine/core";
+import { Paper, ActionIcon, Modal } from "@mantine/core";
 import { Camera } from "react-camera-pro";
 import React, { useRef, useState, useCallback } from "react";
-import { collection, addDoc, query, where, getDocs, updateDoc, deleteDoc, doc } from "firebase/firestore";
-import { ref, uploadString, getDownloadURL, deleteObject } from "firebase/storage";
+import {
+  collection,
+  addDoc,
+  query,
+  where,
+  getDocs,
+  updateDoc,
+  deleteDoc,
+  doc,
+} from "firebase/firestore";
+import {
+  ref,
+  uploadString,
+  getDownloadURL,
+  deleteObject,
+} from "firebase/storage";
 import {
   IconCamera,
   IconCameraRotate,
@@ -13,7 +27,10 @@ import {
 } from "@tabler/icons-react";
 import { storage, db } from "../firebase";
 import { RecognizedItemsTable } from "./RecognizedItemsTable";
-import { getColorForCategory, updateLocalCategoryColors } from "../utils/categoryColorutils";
+import {
+  getColorForCategory,
+  updateLocalCategoryColors,
+} from "../utils/categoryColorutils";
 
 const CameraComponent = ({
   onImageCapture,
@@ -27,7 +44,7 @@ const CameraComponent = ({
   const [numberOfCameras, setNumberOfCameras] = useState(0);
   const [recognizedItems, setRecognizedItems] = useState<any[]>([]);
   const [showConfirmationTable, setShowConfirmationTable] = useState(false);
-
+  const [isLoading, setIsLoading] = useState(false);
   const takePhoto = useCallback(() => {
     if (camera.current) {
       const photo = camera.current.takePhoto();
@@ -61,6 +78,7 @@ const CameraComponent = ({
     console.log("saveImage function called");
     if (image) {
       try {
+        setIsLoading(true);
         console.log("Uploading image to Firebase Storage");
         const storageRef = ref(storage, `itemImages/${Date.now()}.jpg`);
         await uploadString(storageRef, image, "data_url");
@@ -86,6 +104,8 @@ const CameraComponent = ({
         console.log("Image deleted from database and storage");
       } catch (error) {
         console.error("Error saving or deleting image: ", error);
+      } finally {
+        setIsLoading(false);
       }
     } else {
       console.log("No image to save");
@@ -96,106 +116,130 @@ const CameraComponent = ({
     setImage(null);
   };
 
-const handleImageRecognition = async (imageUrl: string) => {
-  console.log("Starting image recognition for URL:", imageUrl);
-  try {
-    const response = await fetch("/api/recognizeImage", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ imageUrl }),
-    });
-
-    console.log("API response status:", response.status);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    console.log("Raw AI output:", data);
-    console.log("Exact Gemini AI response:", JSON.stringify(data, null, 2));
-    console.log("recognized items:", data.recognizedItems);
-
-    let localCategories = JSON.parse(localStorage.getItem('categories') || '[]');
-    const categoryColorMap: Map<string, string> = new Map(
-      localCategories.map((cat: { name: string; color: string }) => [cat.name, cat.color])
-    );
-
-    const itemsArray = Array.isArray(data.recognizedItems)
-        ? data.recognizedItems
-        : data.recognizedItems.split('\n').filter(Boolean);
-
-    const parsedItems = itemsArray.map((item: any) => {
-      let parsedItem;
-      try {
-        parsedItem = typeof item === 'string' ? JSON.parse(item) : item;
-      } catch (e) {
-        console.error("Error parsing item:", item);
-        return null;
+  const syncCategoriesToFirebase = async (localCategories: any[]) => {
+    const categoriesRef = collection(db, "categories");
+    for (const category of localCategories) {
+      const q = query(categoriesRef, where("name", "==", category.name));
+      const querySnapshot = await getDocs(q);
+      if (querySnapshot.empty) {
+        await addDoc(categoriesRef, category);
+      } else {
+        await updateDoc(querySnapshot.docs[0].ref, category);
       }
+    }
+  };
 
-      const categories = (parsedItem.categories || []).map((category: string) => {
-        if (!categoryColorMap.has(category)) {
-          const color = getColorForCategory(category, categoryColorMap);
-          const newCategory = { name: category, color };
-          localCategories.push(newCategory);
-          categoryColorMap.set(category, color);
-        }
-        return { name: category, color: categoryColorMap.get(category)! };
+  const handleImageRecognition = async (imageUrl: string) => {
+    console.log("Starting image recognition for URL:", imageUrl);
+    try {
+      const response = await fetch("/api/recognizeImage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl }),
       });
 
-      return {
-        name: parsedItem.name || '',
-        amount: parsedItem.amount || '',
-        categories: categories,
-        createdAt: new Date().toISOString()
-      };
-    }).filter(Boolean);
-
-    // localStorage.setItem('categories', JSON.stringify(localCategories));
-
-    console.log("Raw AI output:", data);
-    console.log("Parsed recognized items:", parsedItems);
-    setRecognizedItems(parsedItems);
-    setShowConfirmationTable(true);
-  } catch (error) {
-    console.error("Error recognizing items in image:", error);
-  }
-};
-
-const handleConfirmAndUpload = async (confirmedItems: any[]) => {
-  console.log("Starting confirm and upload with items:", confirmedItems);
-  try {
-    const validItems = confirmedItems.filter(item => item && item.name !== '');
-    console.log("Valid items:", validItems);
-    for (const item of validItems) {
-      console.log("Processing item:", item);
-      const itemRef = collection(db, "items");
-      const q = query(itemRef, where("name", "==", item.name));
-      const querySnapshot = await getDocs(q);
-
-      if (querySnapshot.empty) {
-        console.log("Adding new item:", item);
-        await addDoc(itemRef, item);
-      } else {
-        console.log("Updating existing item:", item);
-        const existingItem = querySnapshot.docs[0];
-        const existingAmount = parseFloat(existingItem.data().amount) || 0;
-        const newAmount = parseFloat(item.amount) || 0;
-        const updatedAmount = (existingAmount + newAmount).toString();
-        console.log("Updated amount:", updatedAmount);
-        await updateDoc(existingItem.ref, { amount: updatedAmount });
+      console.log("API response status:", response.status);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+
+      const data = await response.json();
+      console.log("Raw AI output:", data);
+      console.log("Exact Gemini AI response:", JSON.stringify(data, null, 2));
+      console.log("recognized items:", data.recognizedItems);
+
+      let localCategories = JSON.parse(
+        localStorage.getItem("categories") || "[]",
+      );
+      const categoryColorMap: Map<string, string> = new Map(
+        localCategories.map((cat: { name: string; color: string }) => [
+          cat.name,
+          cat.color,
+        ]),
+      );
+
+      const itemsArray = Array.isArray(data.recognizedItems)
+        ? data.recognizedItems
+        : data.recognizedItems.split("\n").filter(Boolean);
+
+      const parsedItems = itemsArray
+        .map((item: any) => {
+          let parsedItem;
+          try {
+            parsedItem = typeof item === "string" ? JSON.parse(item) : item;
+          } catch (e) {
+            console.error("Error parsing item:", item);
+            return null;
+          }
+
+          const categories = (parsedItem.categories || []).map(
+            (category: string) => {
+              if (!categoryColorMap.has(category)) {
+                const color = getColorForCategory(category, categoryColorMap);
+                const newCategory = { name: category, color };
+                localCategories.push(newCategory);
+                categoryColorMap.set(category, color);
+              }
+              return { name: category, color: categoryColorMap.get(category)! };
+            },
+          );
+
+          return {
+            name: parsedItem.name || "",
+            amount: parsedItem.amount || "",
+            categories: categories,
+            createdAt: new Date().toISOString(),
+          };
+        })
+        .filter(Boolean);
+
+      // localStorage.setItem('categories', JSON.stringify(localCategories));
+
+      console.log("Raw AI output:", data);
+      console.log("Parsed recognized items:", parsedItems);
+      setRecognizedItems(parsedItems);
+      setShowConfirmationTable(true);
+    } catch (error) {
+      console.error("Error recognizing items in image:", error);
     }
-    if (image) {
-      console.log("Calling onImageCapture with image");
-      onImageCapture(image);
+  };
+
+  const handleConfirmAndUpload = async (confirmedItems: any[]) => {
+    console.log("Starting confirm and upload with items:", confirmedItems);
+    try {
+      const validItems = confirmedItems.filter(
+        (item) => item && item.name !== "",
+      );
+      console.log("Valid items:", validItems);
+      for (const item of validItems) {
+        console.log("Processing item:", item);
+        const itemRef = collection(db, "items");
+        const q = query(itemRef, where("name", "==", item.name));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+          console.log("Adding new item:", item);
+          await addDoc(itemRef, item);
+        } else {
+          console.log("Updating existing item:", item);
+          const existingItem = querySnapshot.docs[0];
+          const existingAmount = parseFloat(existingItem.data().amount) || 0;
+          const newAmount = parseFloat(item.amount) || 0;
+          const updatedAmount = (existingAmount + newAmount).toString();
+          console.log("Updated amount:", updatedAmount);
+          await updateDoc(existingItem.ref, { amount: updatedAmount });
+        }
+      }
+      if (image) {
+        console.log("Calling onImageCapture with image");
+        onImageCapture(image);
+      }
+      console.log("Closing camera component");
+      onClose();
+    } catch (error) {
+      console.error("Error in handleConfirmAndUpload:", error);
     }
-    console.log("Closing camera component");
-    onClose();
-  } catch (error) {
-    console.error("Error in handleConfirmAndUpload:", error);
-  }
-};
+  };
 
   const errorMessages = {
     noCameraAccessible: "No camera device accessible",
@@ -209,45 +253,51 @@ const handleConfirmAndUpload = async (confirmedItems: any[]) => {
   return (
     <div className="flex flex-col h-full">
       {!image ? (
-          <div style={{ position: 'relative', width: '100%', height: 'calc(100vh - 2rem)' }}>
-            <Camera
-                ref={camera}
-                errorMessages={errorMessages}
-                aspectRatio="cover"
-                numberOfCamerasCallback={setNumberOfCameras}
-            />
-            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex justify-center items-center space-x-4 z-10">
+        <div
+          style={{
+            position: "relative",
+            width: "100%",
+            height: "calc(100vh - 2rem)",
+          }}
+        >
+          <Camera
+            ref={camera}
+            errorMessages={errorMessages}
+            aspectRatio="cover"
+            numberOfCamerasCallback={setNumberOfCameras}
+          />
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex justify-center items-center space-x-4 z-10">
+            <ActionIcon
+              size="xl"
+              radius="xl"
+              variant="filled"
+              color="green"
+              onClick={handleUploadPhoto}
+            >
+              <IconUpload size={24} />
+            </ActionIcon>
+            <ActionIcon
+              size="5xl"
+              radius="xl"
+              variant="filled"
+              color="blue"
+              onClick={takePhoto}
+            >
+              <IconCamera size={48} />
+            </ActionIcon>
+            {numberOfCameras > 1 && (
               <ActionIcon
-                  size="xl"
-                  radius="xl"
-                  variant="filled"
-                  color="green"
-                  onClick={handleUploadPhoto}
+                size="xl"
+                radius="xl"
+                variant="filled"
+                color="blue"
+                onClick={switchCamera}
               >
-                <IconUpload size={24} />
+                <IconCameraRotate size={24} />
               </ActionIcon>
-              <ActionIcon
-                  size="3xl"
-                  radius="xl"
-                  variant="filled"
-                  color="blue"
-                  onClick={takePhoto}
-              >
-                <IconCamera size={36} />
-              </ActionIcon>
-              {numberOfCameras > 1 && (
-                  <ActionIcon
-                      size="xl"
-                      radius="xl"
-                      variant="filled"
-                      color="blue"
-                      onClick={switchCamera}
-                  >
-                    <IconCameraRotate size={24} />
-                  </ActionIcon>
-              )}
-            </div>
+            )}
           </div>
+        </div>
       ) : (
         <Paper
           shadow="lg"
@@ -279,8 +329,9 @@ const handleConfirmAndUpload = async (confirmedItems: any[]) => {
               variant="filled"
               color="green"
               onClick={saveImage}
+              loading={isLoading}
             >
-              <IconArrowRight size={32} />
+              {!isLoading && <IconArrowRight size={32} />}
             </ActionIcon>
           </div>
         </Paper>
