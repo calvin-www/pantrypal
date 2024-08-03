@@ -44,26 +44,22 @@ Examples:
 {"name": "banana", "amount": 2, "categories": ["fruits", "fresh"]}
 {"name": "orange", "amount": 1, "categories": ["fruits", "fresh"]}
 {"name": "apple", "amount": 3, "categories": ["fruits", "fresh"]}
-{"name": "bread", "amount": 1, "categories": ["bakery", "grains"]}
-{"name": "milk", "amount": 2, "categories": ["dairy", "solid"]}
-{"name": "tomato", "amount": 1, "categories": ["vegetables", "fruits"]}
-{"name": "carrot", "amount": 2, "categories": ["vegetables", "fruits"]}
-{"name": "potato", "amount": 3, "categories": ["vegetables", "grains"]}
-{"name": "rice", "amount": 1, "categories": ["grains"]}
-{"name": "onion", "amount": 2, "categories": ["vegetables", "fruits"]}
-{"name": "garlic", "amount": 1, "categories": ["vegetables", "spices"]}
-{"name": "pepper", "amount": 3, "categories": ["vegetables", "spices"]}`,
+{"name": "bread", "amount": 1, "categories": ["bakery", "grains"]}`,
       imagePart,
     ]);
 
     const generatedResponse = await result.response;
     const text = await generatedResponse.text();
 
-    // Parse the text response into a structured format
+// Parse the text response into a structured format
     const recognizedItems = text.split('\n').map((line: string) => {
-      const [name, amount] = line.split(':');
-      return { name: name.trim(), amount: amount ? amount.trim() : '1', categories: [] };
-    });
+      try {
+        return JSON.parse(line);
+      } catch (error) {
+        console.error("Error parsing line:", line);
+        return null;
+      }
+    }).filter(item => item !== null);
 
     res.status(200).json({ recognizedItems });
   } catch (error) {
