@@ -40,9 +40,19 @@ Format each item as a valid JSON object on a single line:
 {"name": "item name", "amount": number, "categories": ["category1", "category2"]}
 
 Return a list of these JSON objects, one per line, with no additional text or explanation.
-Example:
+Examples:
+{"name": "banana", "amount": 2, "categories": ["fruits", "fresh"]}
+{"name": "orange", "amount": 1, "categories": ["fruits", "fresh"]}
 {"name": "apple", "amount": 3, "categories": ["fruits", "fresh"]}
-{"name": "bread", "amount": 1, "categories": ["bakery", "grains"]}`,
+{"name": "bread", "amount": 1, "categories": ["bakery", "grains"]}
+{"name": "milk", "amount": 2, "categories": ["dairy", "solid"]}
+{"name": "tomato", "amount": 1, "categories": ["vegetables", "fruits"]}
+{"name": "carrot", "amount": 2, "categories": ["vegetables", "fruits"]}
+{"name": "potato", "amount": 3, "categories": ["vegetables", "grains"]}
+{"name": "rice", "amount": 1, "categories": ["grains"]}
+{"name": "onion", "amount": 2, "categories": ["vegetables", "fruits"]}
+{"name": "garlic", "amount": 1, "categories": ["vegetables", "spices"]}
+{"name": "pepper", "amount": 3, "categories": ["vegetables", "spices"]}`,
       imagePart,
     ]);
 

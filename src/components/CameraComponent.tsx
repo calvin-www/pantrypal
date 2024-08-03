@@ -111,17 +111,23 @@ const handleImageRecognition = async (imageUrl: string) => {
     }
 
     const data = await response.json();
-    console.log("Raw recognized items:", data.recognizedItems);
+    console.log("Raw AI output:", data);
+    console.log("Exact Gemini AI response:", JSON.stringify(data, null, 2));
+    console.log("recognized items:", data.recognizedItems);
 
     let localCategories = JSON.parse(localStorage.getItem('categories') || '[]');
     const categoryColorMap: Map<string, string> = new Map(
       localCategories.map((cat: { name: string; color: string }) => [cat.name, cat.color])
     );
 
-    const parsedItems = data.recognizedItems.map((item: any) => {
+    const itemsArray = Array.isArray(data.recognizedItems)
+        ? data.recognizedItems
+        : data.recognizedItems.split('\n').filter(Boolean);
+
+    const parsedItems = itemsArray.map((item: any) => {
       let parsedItem;
       try {
-        parsedItem = JSON.parse(item.name);
+        parsedItem = typeof item === 'string' ? JSON.parse(item) : item;
       } catch (e) {
         console.error("Error parsing item:", item);
         return null;
@@ -145,7 +151,7 @@ const handleImageRecognition = async (imageUrl: string) => {
       };
     }).filter(Boolean);
 
-    localStorage.setItem('categories', JSON.stringify(localCategories));
+    // localStorage.setItem('categories', JSON.stringify(localCategories));
 
     console.log("Raw AI output:", data);
     console.log("Parsed recognized items:", parsedItems);
