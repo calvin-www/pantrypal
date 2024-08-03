@@ -44,29 +44,35 @@ const VoiceRecognitionComponent: React.FC<VoiceRecognitionComponentProps> = ({ o
     };
   }, [browserSupportsSpeechRecognition]);
 
-  const handleInterpretTranscript = async () => {
-    if (transcript) {
-      try {
-        const response = await fetch('/api/interpretTranscript', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ transcript }),
-        });
-        const data = await response.json();
-        if (data.interpretedOperations) {
-          setOperations(data.interpretedOperations);
-          setAIInterpretation(JSON.stringify(data.interpretedOperations));
-          setShowConfirmation(true);
-        } else {
-          console.error('No valid content in the response');
-        }
-      } catch (error) {
-        console.error('Error interpreting transcript:', error);
+const handleInterpretTranscript = async () => {
+  if (transcript) {
+    console.log('Transcript to interpret:', transcript);
+    try {
+      const response = await fetch('/api/interpretTranscript', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ transcript }),
+      });
+      console.log('API response status:', response.status);
+      const data = await response.json();
+      console.log('API response data:', data);
+      if (data.interpretedOperations) {
+        console.log('Interpreted operations:', data.interpretedOperations);
+        setOperations(data.interpretedOperations);
+        setAIInterpretation(JSON.stringify(data.interpretedOperations));
+        setShowConfirmation(true);
+      } else {
+        console.error('No valid content in the response');
       }
+    } catch (error) {
+      console.error('Error interpreting transcript:', error);
     }
-  };
+  } else {
+    console.log('No transcript to interpret');
+  }
+};
 
   const handleConfirmOperations = async () => {
     for (const operation of operations) {
