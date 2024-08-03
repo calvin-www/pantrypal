@@ -13,6 +13,7 @@ import {
 } from "@tabler/icons-react";
 import { storage, db } from "../firebase";
 import { RecognizedItemsTable } from "./RecognizedItemsTable";
+import { getColorForCategory, updateLocalCategoryColors } from "../utils/categoryColorutils";
 
 const CameraComponent = ({
   onImageCapture,
@@ -96,6 +97,7 @@ const CameraComponent = ({
   };
 
   const handleImageRecognition = async (imageUrl: string) => {
+    console.log("Starting image recognition for URL:", imageUrl);
     try {
       const response = await fetch("/api/recognizeImage", {
         method: "POST",
@@ -103,45 +105,83 @@ const CameraComponent = ({
         body: JSON.stringify({ imageUrl }),
       });
 
+      console.log("API response status:", response.status);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-      setRecognizedItems(data.recognizedItems);
+      console.log("Raw recognized items:", data.recognizedItems);
+
+      const localCategories = JSON.parse(localStorage.getItem('categories') || '[]');
+      const categoryColorMap: Map<string, string> = new Map(
+          localCategories.map((cat: { name: string; color: string }) => [cat.name, cat.color])
+      );
+      const parsedItems = await Promise.all(data.recognizedItems.map(async (item: any) => {
+        const categories = await Promise.all(item.categories.map(async (category: string) => {
+          if (!categoryColorMap.has(category)) {
+            const color = getColorForCategory(category, categoryColorMap);
+            const newCategory = { name: category, color };
+            localCategories.push(newCategory);
+            categoryColorMap.set(category, color);
+            await addDoc(collection(db, 'categories'), newCategory);
+          }
+          return { name: category, color: categoryColorMap.get(category) };
+        }));
+
+        return {
+          name: item.name,
+          amount: item.amount.toString(),
+          categories,
+          createdAt: new Date().toISOString()
+        };
+      }));
+
+      localStorage.setItem('categories', JSON.stringify(localCategories));
+
+      console.log("Raw AI output:", data);
+      console.log("Parsed recognized items:", parsedItems);
+      setRecognizedItems(parsedItems);
       setShowConfirmationTable(true);
     } catch (error) {
       console.error("Error recognizing items in image:", error);
     }
   };
 
-  const handleConfirmAndUpload = async (confirmedItems: any[]) => {
-    try {
-      const validItems = confirmedItems.filter(item => item && item.name !== '');
-      for (const item of validItems) {
-        const itemRef = collection(db, "items");
-        const q = query(itemRef, where("name", "==", item.name));
-        const querySnapshot = await getDocs(q);
+const handleConfirmAndUpload = async (confirmedItems: any[]) => {
+  console.log("Starting confirm and upload with items:", confirmedItems);
+  try {
+    const validItems = confirmedItems.filter(item => item && item.name !== '');
+    console.log("Valid items:", validItems);
+    for (const item of validItems) {
+      console.log("Processing item:", item);
+      const itemRef = collection(db, "items");
+      const q = query(itemRef, where("name", "==", item.name));
+      const querySnapshot = await getDocs(q);
 
-        if (querySnapshot.empty) {
-          await addDoc(itemRef, item);
-        } else {
-          const existingItem = querySnapshot.docs[0];
-          const existingAmount = parseFloat(existingItem.data().amount) || 0;
-          const newAmount = parseFloat(item.amount) || 0;
-          await updateDoc(existingItem.ref, {
-            amount: (existingAmount + newAmount).toString()
-          });
-        }
+      if (querySnapshot.empty) {
+        console.log("Adding new item:", item);
+        await addDoc(itemRef, item);
+      } else {
+        console.log("Updating existing item:", item);
+        const existingItem = querySnapshot.docs[0];
+        const existingAmount = parseFloat(existingItem.data().amount) || 0;
+        const newAmount = parseFloat(item.amount) || 0;
+        const updatedAmount = (existingAmount + newAmount).toString();
+        console.log("Updated amount:", updatedAmount);
+        await updateDoc(existingItem.ref, { amount: updatedAmount });
       }
-      if (image) {
-        onImageCapture(image);
-      }
-      onClose();
-    } catch (error) {
-      console.error("Error in handleConfirmAndUpload:", error);
     }
-  };
+    if (image) {
+      console.log("Calling onImageCapture with image");
+      onImageCapture(image);
+    }
+    console.log("Closing camera component");
+    onClose();
+  } catch (error) {
+    console.error("Error in handleConfirmAndUpload:", error);
+  }
+};
 
   const errorMessages = {
     noCameraAccessible: "No camera device accessible",
