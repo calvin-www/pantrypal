@@ -103,9 +103,23 @@ const CameraComponent = ({
       }
 
       const data = await response.json();
-      console.log("Processed recognized items:", data.recognizedItems);
+      console.log("Raw AI output:", data);
 
-      setRecognizedItems(data.recognizedItems);
+      // Parse the string representation of JSON objects
+      let parsedItems;
+      try {
+        parsedItems = JSON.parse(data.recognizedItems.replace(/'/g, '"'));
+      } catch (parseError) {
+        console.error("Error parsing recognized items:", parseError);
+        parsedItems = [];
+      }
+
+      // Ensure parsedItems is an array
+      const recognizedItems = Array.isArray(parsedItems) ? parsedItems : [parsedItems];
+
+      console.log("Processed recognized items:", recognizedItems);
+
+      setRecognizedItems(recognizedItems);
       setShowConfirmationTable(true);
       console.log("Recognition complete, showing confirmation table");
     } catch (error) {
