@@ -25,11 +25,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
     };
 
-    // Generate content based on the image
+    const categories = JSON.parse(req.headers['x-categories'] as string || '[]');
+    const categoryNames = categories.map((cat: any) => cat.name).join(', ');
+
+    // Generate content based on the image and categories
     const result = await model.generateContent([
-      "Identify and list the food items in this image. For each item, provide its name and an estimated quantity.",
+      `Identify and list the food items in this image. For each item, provide its name and quantity with no units in this format {name(string),amount(float),categories(List[string])}. Use these categories where applicable: ${categoryNames}.`,
       imagePart,
     ]);
+
 
     const generatedResponse = await result.response;
     const text = await generatedResponse.text();

@@ -2,7 +2,7 @@ import Image from "next/image";
 import { Paper, Button, ActionIcon, Modal } from "@mantine/core";
 import { Camera } from "react-camera-pro";
 import React, { useRef, useState, useCallback } from "react";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, query, where, getDocs, updateDoc } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import {
   IconCamera,
@@ -113,20 +113,35 @@ const CameraComponent = ({
     }
   };
 
-const handleConfirmAndUpload = async (confirmedItems: any[]) => {
-  try {
-    const validItems = confirmedItems.filter(item => item && item.name !== '');
-    for (const item of validItems) {
-      await addDoc(collection(db, "pantryItems"), item);
+  const handleConfirmAndUpload = async (confirmedItems: any[]) => {
+    try {
+      const validItems = confirmedItems.filter(item => item && item.name !== '');
+      for (const item of validItems) {
+        const itemRef = collection(db, "items");
+        const q = query(itemRef, where("name", "==", item.name));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+          // Item doesn't exist, add new item
+          await addDoc(itemRef, item);
+        } else {
+          // Item exists, update the amount
+          const existingItem = querySnapshot.docs[0];
+          const existingAmount = parseFloat(existingItem.data().amount) || 0;
+          const newAmount = parseFloat(item.amount) || 0;
+          await updateDoc(existingItem.ref, {
+            amount: (existingAmount + newAmount).toString()
+          });
+        }
+      }
+      if (image) {
+        onImageCapture(image);
+      }
+      onClose();
+    } catch (error) {
+      console.error("Error in handleConfirmAndUpload:", error);
     }
-    if (image) {
-      onImageCapture(image);
-    }
-    onClose();
-  } catch (error) {
-    console.error("Error in handleConfirmAndUpload:", error);
-  }
-};
+  };
 
   const errorMessages = {
     noCameraAccessible: "No camera device accessible",
@@ -164,7 +179,7 @@ const handleConfirmAndUpload = async (confirmedItems: any[]) => {
                   color="blue"
                   onClick={takePhoto}
               >
-                <IconCamera size={24} />
+                <IconCamera size={36} />
               </ActionIcon>
               {numberOfCameras > 1 && (
                   <ActionIcon
