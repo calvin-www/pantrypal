@@ -1,22 +1,40 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Modal, Grid, TextInput, NumberInput, Button, Text, Badge, Title } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
-import { updateDoc, doc } from "firebase/firestore";
-import { db } from "../firebase";
-import { Item } from "../types/item";
 import { CategoryCombobox } from "./CategoryCombobox";
 import { getLocalCategoryColors } from "../utils/categoryColorutils";
+import { updateDoc, doc } from 'firebase/firestore';
+import{ db } from '../firebase';
 
 interface EditModalProps {
-    item: Item;
+    item: Item | RecognizedItem;
     isModalOpen: boolean;
     setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+    onSave?: (item: Item | RecognizedItem) => Promise<void>;
+    existingCategories?: { name: string; color: string }[];
 }
 
-const EditModal: React.FC<EditModalProps> = ({
-        item, isModalOpen, setIsModalOpen,
-    }) => {
-    const [editedItem, setEditedItem] = useState<Item>(item);
+interface Item {
+    id: string;
+    name: string;
+    amount: string;
+    categories: { name: string; color: string }[];
+}
+
+interface RecognizedItem {
+    name: string;
+    amount: string;
+    categories: { name: string; color: string }[];
+}
+
+    const EditModal: React.FC<EditModalProps> = ({
+                                                     item,
+                                                     isModalOpen,
+                                                     setIsModalOpen,
+                                                     onSave,
+                                                     existingCategories,
+                                                 }) => {
+    const [editedItem, setEditedItem] = useState<Item | RecognizedItem>(item);
     const [categoryColorMap, setCategoryColorMap] = useState<Map<string, string>>(new Map());
 
     useEffect(() => {
@@ -29,20 +47,28 @@ const EditModal: React.FC<EditModalProps> = ({
     }, [item]);
 
     const handleUpdate = useCallback(async () => {
-        try {
-            await updateDoc(doc(db, "items", editedItem.id!), {
-                name: editedItem.name.trim(),
-                amount: editedItem.amount,
-                categories: editedItem.categories,
-            });
-            setIsModalOpen(false);
-        } catch (error) {
-            console.error("Error updating document: ", error);
+        if (typeof onSave === 'function') {
+            // For RecognizedItemsTable: update the recognized item
+            await onSave(editedItem);
+        } else if ('id' in editedItem) {
+            // For TableView or ItemList: update the existing item in the database
+            try {
+                await updateDoc(doc(db, "items", editedItem.id), {
+                    name: editedItem.name.trim(),
+                    amount: editedItem.amount,
+                    categories: editedItem.categories,
+                });
+            } catch (error) {
+                console.error("Error updating document: ", error);
+            }
+        } else {
+            console.error('Unable to save item: No onSave function and no item ID');
         }
-    }, [editedItem, setIsModalOpen]);
+        setIsModalOpen(false);
+    }, [editedItem, onSave, setIsModalOpen]);
 
     const handleAddCategory = (category: string, color: string) => {
-        if (category ) {
+        if (category) {
             setEditedItem({
                 ...editedItem,
                 categories: [

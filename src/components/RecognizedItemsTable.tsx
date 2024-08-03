@@ -1,50 +1,106 @@
-import React from 'react';
-import { Table, Checkbox, Button } from '@mantine/core';
+import React, { useState, useEffect } from 'react';
+import { Table, Checkbox, ActionIcon, Modal } from '@mantine/core';
+import { IconEdit, IconTrash } from '@tabler/icons-react';
+import EditModal from "./EditModal"
+import { db } from '../firebase';
+import { collection, getDocs } from 'firebase/firestore';
 
 interface RecognizedItem {
   name: string;
-  confidence: number;
+  amount: string;
+  categories: { name: string; color: string }[];
 }
 
 interface RecognizedItemsTableProps {
   items: RecognizedItem[];
-  onConfirm: (selectedItems: RecognizedItem[]) => void;
+  onConfirm: (items: RecognizedItem[]) => void;
   onCancel: () => void;
 }
 
 export const RecognizedItemsTable: React.FC<RecognizedItemsTableProps> = ({ items, onConfirm, onCancel }) => {
-  const [selectedItems, setSelectedItems] = React.useState<RecognizedItem[]>([]);
+  const [selectedItems, setSelectedItems] = useState<RecognizedItem[]>(items);
+  const [editingItem, setEditingItem] = useState<RecognizedItem | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [existingCategories, setExistingCategories] = useState<{ name: string; color: string }[]>([]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const categoriesCollection = collection(db, 'categories');
+      const categoriesSnapshot = await getDocs(categoriesCollection);
+      const categoriesList = categoriesSnapshot.docs.map(doc => ({ name: doc.data().name, color: doc.data().color }));
+      setExistingCategories(categoriesList);
+    };
+    fetchCategories();
+  }, []);
 
   const toggleItem = (item: RecognizedItem) => {
-    setSelectedItems(prev => 
-      prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]
+    setSelectedItems(prev =>
+        prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]
     );
   };
 
+  const handleEdit = (item: RecognizedItem) => {
+    setEditingItem(item);
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditSave = (updatedItem: RecognizedItem) => {
+    setSelectedItems(prev => prev.map(item => item === editingItem ? updatedItem : item));
+    setIsEditModalOpen(false);
+  };
+
   return (
-    <div>
-      <Table>
-        <thead>
+      <>
+        <Table>
+          <thead>
           <tr>
             <th>Select</th>
-            <th>Item Name</th>
-            <th>Confidence</th>
+            <th>Name</th>
+            <th>Amount</th>
+            <th>Categories</th>
+            <th>Actions</th>
           </tr>
-        </thead>
-        <tbody>
+          </thead>
+          <tbody>
           {items.map((item, index) => (
-            <tr key={index}>
-              <td><Checkbox checked={selectedItems.includes(item)} onChange={() => toggleItem(item)} /></td>
-              <td>{item.name}</td>
-              <td>{(item.confidence * 100).toFixed(2)}%</td>
-            </tr>
+              <tr key={index}>
+                <td>
+                  <Checkbox
+                      checked={selectedItems.includes(item)}
+                      onChange={() => toggleItem(item)}
+                  />
+                </td>
+                <td>{item.name}</td>
+                <td>{item.amount}</td>
+                <td>{item.categories.map(cat => cat.name).join(', ')}</td>
+                <td>
+                  <ActionIcon onClick={() => handleEdit(item)}>
+                    <IconEdit size={16} />
+                  </ActionIcon>
+                </td>
+              </tr>
           ))}
-        </tbody>
-      </Table>
-      <div className="flex justify-end mt-4">
-        <Button onClick={onCancel} variant="outline" className="mr-2">Cancel</Button>
-        <Button onClick={() => onConfirm(selectedItems)}>Confirm</Button>
-      </div>
-    </div>
+          </tbody>
+        </Table>
+
+        <Modal
+            opened={isEditModalOpen}
+            onClose={() => setIsEditModalOpen(false)}
+            title="Edit Item"
+        >
+          {editingItem && (
+              <EditModal
+                  item={editingItem}
+                  isModalOpen={isEditModalOpen}
+                  setIsModalOpen={setIsEditModalOpen}
+                  onSave={handleEditSave}
+                  existingCategories={existingCategories}
+              />
+          )}
+        </Modal>
+
+        <button onClick={() => onConfirm(selectedItems)}>Confirm</button>
+        <button onClick={onCancel}>Cancel</button>
+      </>
   );
 };
