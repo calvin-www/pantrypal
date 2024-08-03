@@ -113,23 +113,20 @@ const CameraComponent = ({
     }
   };
 
-  const handleConfirmAndUpload = async (confirmedItems: any[]) => {
-    try {
-      for (const item of confirmedItems) {
-        if (item && typeof item === 'object') {
-          await addDoc(collection(db, "pantryItems"), item);
-        } else {
-          console.error("Invalid item:", item);
-        }
-      }
-      if (image) {
-        onImageCapture(image);
-      }
-      onClose();
-    } catch (error) {
-      console.error("Error in handleConfirmAndUpload:", error);
+const handleConfirmAndUpload = async (confirmedItems: any[]) => {
+  try {
+    const validItems = confirmedItems.filter(item => item && item.name !== '');
+    for (const item of validItems) {
+      await addDoc(collection(db, "pantryItems"), item);
     }
-  };
+    if (image) {
+      onImageCapture(image);
+    }
+    onClose();
+  } catch (error) {
+    console.error("Error in handleConfirmAndUpload:", error);
+  }
+};
 
   const errorMessages = {
     noCameraAccessible: "No camera device accessible",
@@ -143,52 +140,45 @@ const CameraComponent = ({
   return (
     <div className="flex flex-col h-full">
       {!image ? (
-        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex justify-center items-center space-x-4 z-10">
-          <div
-            style={{
-              position: "relative",
-              width: "100%",
-              height: "calc(100vh - 2rem)",
-              overflow: "hidden",
-            }}
-          >
+          <div style={{ position: 'relative', width: '100%', height: 'calc(100vh - 2rem)' }}>
             <Camera
-              ref={camera}
-              errorMessages={errorMessages}
-              aspectRatio="cover"
-              numberOfCamerasCallback={setNumberOfCameras}
+                ref={camera}
+                errorMessages={errorMessages}
+                aspectRatio="cover"
+                numberOfCamerasCallback={setNumberOfCameras}
             />
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex justify-center items-center space-x-4 z-10">
+              <ActionIcon
+                  size="xl"
+                  radius="xl"
+                  variant="filled"
+                  color="green"
+                  onClick={handleUploadPhoto}
+              >
+                <IconUpload size={24} />
+              </ActionIcon>
+              <ActionIcon
+                  size="xl"
+                  radius="xl"
+                  variant="filled"
+                  color="blue"
+                  onClick={takePhoto}
+              >
+                <IconCamera size={24} />
+              </ActionIcon>
+              {numberOfCameras > 1 && (
+                  <ActionIcon
+                      size="xl"
+                      radius="xl"
+                      variant="filled"
+                      color="blue"
+                      onClick={switchCamera}
+                  >
+                    <IconCameraRotate size={24} />
+                  </ActionIcon>
+              )}
+            </div>
           </div>
-          <ActionIcon
-            size="xl"
-            radius="xl"
-            variant="filled"
-            color="green"
-            onClick={handleUploadPhoto}
-          >
-            <IconUpload size={24} />
-          </ActionIcon>
-          <ActionIcon
-            size="xl"
-            radius="xl"
-            variant="filled"
-            color="blue"
-            onClick={takePhoto}
-          >
-            <IconCamera size={24} />
-          </ActionIcon>
-          {numberOfCameras > 1 && (
-            <ActionIcon
-              size="xl"
-              radius="xl"
-              variant="filled"
-              color="blue"
-              onClick={switchCamera}
-            >
-              <IconCameraRotate size={24} />
-            </ActionIcon>
-          )}
-        </div>
       ) : (
         <Paper
           shadow="lg"
