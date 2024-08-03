@@ -134,6 +134,20 @@ const CameraComponent = ({
     <div className="flex flex-col h-full">
       {!image ? (
         <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex justify-center items-center space-x-4 z-10">
+          <div
+            style={{
+              position: "relative",
+              width: "100%",
+              height: "calc(100vh - 2rem)",
+            }}
+          >
+            <Camera
+              ref={camera}
+              errorMessages={errorMessages}
+              aspectRatio="cover"
+              numberOfCamerasCallback={setNumberOfCameras}
+            />
+          </div>
           <ActionIcon
             size="xl"
             radius="xl"
