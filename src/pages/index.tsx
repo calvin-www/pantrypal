@@ -20,6 +20,7 @@ import { IconCamera,IconMicrophone } from "@tabler/icons-react";
 import "regenerator-runtime/runtime";
 import { db } from '../firebase';
 import VoiceRecognitionComponent from '../components/VoiceRecognitionComponent';
+import { Analytics } from '@vercel/analytics/react';
 
 
 
@@ -152,6 +153,7 @@ function Home() {
         <h1 className="text-2xl font-bold text-white max-w-[1400px] mx-auto px-4">
           PantryPal!
         </h1>
+        <Analytics />
       </div>
       <div className="flex-grow flex justify-center items-start py-4 overflow-x-auto">
         <div className="w-full max-w-[1400px] px-4 min-w-[320px]">

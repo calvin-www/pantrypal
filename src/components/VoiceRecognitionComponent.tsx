@@ -4,7 +4,7 @@ import { IconPencil, IconTrash } from '@tabler/icons-react';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import EditModal from "./EditModal";
 import { db } from '../firebase';
-import { doc, addDoc, updateDoc, deleteDoc, collection, DocumentReference, Firestore } from 'firebase/firestore';
+import { doc, addDoc, updateDoc, deleteDoc, collection, getDocs, query , where, Firestore } from 'firebase/firestore';
 
 interface Operation {
     type: 'add' | 'delete' | 'edit';
@@ -125,46 +125,53 @@ const handleOperationTypeChange = (index: number, value: 'add' | 'delete' | 'edi
     };
 
 
-    const handleConfirm = async () => {
-        setIsLoading(true);
-        try {
-            for (const operation of operations) {
-                const { type, item } = operation;
-                switch (type) {
-                    case 'add':
+const handleConfirm = async () => {
+    setIsLoading(true);
+    try {
+        for (const operation of operations) {
+            const { type, item } = operation;
+            switch (type) {
+                case 'add':
+                    const querySnapshot = await getDocs(query(collection(db, 'items'), where('name', '==', item.name)));
+                    if (!querySnapshot.empty) {
+                        const existingDoc = querySnapshot.docs[0];
+                        const existingItem = existingDoc.data();
+                        const newAmount = parseFloat(existingItem.amount) + parseFloat(item.amount);
+                        await updateDoc(existingDoc.ref, { amount: newAmount.toString() });
+                    } else {
                         await addDoc(collection(db, 'items'), item);
-                        break;
-                    case 'edit':
-                        if ('id' in item && typeof item.id === 'string') {
-                            const docRef = doc(db as Firestore, 'items', item.id);
-                            await updateDoc(docRef, item);
-                        } else {
-                            console.error('Cannot edit item without a valid ID');
-                        }
-                        break;
-                    case 'delete':
-                        if ('id' in item && typeof item.id === 'string') {
-                            const docRef = doc(db as Firestore, 'items', item.id);
-                            await deleteDoc(docRef);
-                        } else {
-                            console.error('Cannot delete item without a valid ID');
-                        }
-                        break;
-                    default:
-                        console.error('Unknown operation type:', type);
-                }
+                    }
+                    break;
+                case 'edit':
+                    if ('id' in item && typeof item.id === 'string') {
+                        const docRef = doc(db as Firestore, 'items', item.id);
+                        await updateDoc(docRef, item);
+                    } else {
+                        console.error('Cannot edit item without a valid ID');
+                    }
+                    break;
+                case 'delete':
+                    if ('id' in item && typeof item.id === 'string') {
+                        const docRef = doc(db as Firestore, 'items', item.id);
+                        await deleteDoc(docRef);
+                    } else {
+                        console.error('Cannot delete item without a valid ID');
+                    }
+                    break;
+                default:
+                    console.error('Unknown operation type:', type);
             }
-            console.log('Operations confirmed and database updated');
-            setOperations([]);
-            resetTranscript();
-            onClose();
-        } catch (error) {
-            console.error('Error updating database:', error);
-        } finally {
-            setIsLoading(false);
         }
-    };
-
+        console.log('Operations confirmed and database updated');
+        setOperations([]);
+        resetTranscript();
+        onClose();
+    } catch (error) {
+        console.error('Error updating database:', error);
+    } finally {
+        setIsLoading(false);
+    }
+};
 
     return (
         <div>
