@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Table, Select, Badge, ActionIcon } from '@mantine/core';
+import { Button, Table, Select, Badge, ActionIcon, Loader } from '@mantine/core';
 import { IconPencil, IconTrash } from '@tabler/icons-react';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import EditModal from "./EditModal";
@@ -18,35 +18,65 @@ interface VoiceRecognitionComponentProps {
     onClose: () => void;
 }
 const VoiceRecognitionComponent: React.FC<VoiceRecognitionComponentProps> = ({ onClose }) => {
-    const { transcript, listening, resetTranscript } = useSpeechRecognition();
     const [isListening, setIsListening] = useState(false);
     const [isInterpreting, setIsInterpreting] = useState(false);
     const [operations, setOperations] = useState<Operation[]>([]);
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [editingItem, setEditingItem] = useState<Operation | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const { transcript, resetTranscript, browserSupportsSpeechRecognition } = useSpeechRecognition();
 
     useEffect(() => {
-        if (listening !== isListening) {
-            setIsListening(listening);
+        if (!browserSupportsSpeechRecognition) {
+            console.error("Browser doesn't support speech recognition.");
+            return;
         }
-    }, [listening]);
+
+        SpeechRecognition.startListening({ continuous: true })
+            .then(() => {
+                console.log("Listening started");
+                setIsListening(true);
+            })
+            .catch((error) => console.error("Error starting to listen:", error));
+
+        return () => {
+            SpeechRecognition.stopListening()
+                .then(() => console.log("Listening stopped"))
+                .catch((error) => console.error("Error stopping listening:", error));
+        };
+    }, [browserSupportsSpeechRecognition]);
+
 
     const handleInterpretTranscript = async () => {
         if (transcript) {
             try {
                 setIsInterpreting(true);
-                SpeechRecognition.stopListening();
-                setIsListening(false);
-                
-                // Simulating API call for interpretation
-                const interpretedOperations: Operation[] = [
-                    { type: 'add', item: { name: 'Apples', amount: '5', categories: [{ name: 'Fruit', color: 'green' }] } },
-                    { type: 'delete', item: { name: 'Bananas', amount: '3', categories: [{ name: 'Fruit', color: 'yellow' }] } },
-                ];
-                setOperations(interpretedOperations);
+                console.log('Sending transcript for interpretation...');
+                const response = await fetch('/api/interpretTranscript', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ transcript }),
+                });
+
+                if (!response.ok) {
+                    console.error('Failed to interpret transcript');
+                    return;
+                }
+
+                const data = await response.json();
+                console.log('Interpreted data:', data);
+                // Handle the interpreted data as needed
+                resetTranscript();
+                onClose();
             } catch (error) {
                 console.error('Error interpreting transcript:', error);
             } finally {
                 setIsInterpreting(false);
             }
+        } else {
+            console.log('No transcript to interpret');
         }
     };
 
@@ -56,8 +86,7 @@ const VoiceRecognitionComponent: React.FC<VoiceRecognitionComponentProps> = ({ o
         setOperations(updatedOperations);
     };
 
-    const [editModalOpen, setEditModalOpen] = useState(false);
-    const [editingItem, setEditingItem] = useState<Operation | null>(null);
+
 
     const handleEdit = (index: number) => {
         setEditingItem(operations[index]);
@@ -73,13 +102,12 @@ const VoiceRecognitionComponent: React.FC<VoiceRecognitionComponentProps> = ({ o
         );
         setEditModalOpen(false);
     };
-    
+
     const handleDelete = (index: number) => {
         const updatedOperations = operations.filter((_, i) => i !== index);
         setOperations(updatedOperations);
     };
 
-    const [isLoading, setIsLoading] = useState(false);
 
     const handleConfirm = async () => {
         setIsLoading(true);
@@ -124,13 +152,23 @@ const VoiceRecognitionComponent: React.FC<VoiceRecognitionComponentProps> = ({ o
 
     return (
         <div>
-            <Button onClick={() => SpeechRecognition.startListening()} disabled={isListening}>
-                {isListening ? 'Listening...' : 'Start Listening'}
-            </Button>
-            <Button onClick={handleInterpretTranscript} disabled={!transcript || isInterpreting}>
-                {isInterpreting ? 'Interpreting...' : 'Interpret Transcript'}
-            </Button>
-            
+            <div className="flex flex-col items-center space-y-4">
+                {!browserSupportsSpeechRecognition ? (
+                    <p className="text-center text-red-500">
+                        Sorry, your browser is not supported. Please try using Chrome or Safari!
+                    </p>
+                ) : isListening ? (
+                    <div className="flex items-center space-x-2">
+                        <Loader size="sm"/>
+                        <span>Listening...</span>
+                    </div>
+                ) : null}
+                <p className="text-center">{transcript}</p>
+                <Button onClick={handleInterpretTranscript} disabled={!transcript || isInterpreting}>
+                    {isInterpreting ? 'Interpreting...' : 'Interpret Transcript'}
+                </Button>
+            </div>
+
             {operations.length > 0 && (
                 <>
                     <Table striped highlightOnHover>
@@ -151,9 +189,9 @@ const VoiceRecognitionComponent: React.FC<VoiceRecognitionComponentProps> = ({ o
                                             value={op.type}
                                             onChange={(value) => handleOperationTypeChange(index, value as 'add' | 'delete' | 'edit')}
                                             data={[
-                                                { value: 'add', label: 'Add' },
-                                                { value: 'delete', label: 'Delete' },
-                                                { value: 'edit', label: 'Edit' },
+                                                {value: 'add', label: 'Add'},
+                                                {value: 'delete', label: 'Delete'},
+                                                {value: 'edit', label: 'Edit'},
                                             ]}
                                         />
                                     </Table.Td>
@@ -173,10 +211,10 @@ const VoiceRecognitionComponent: React.FC<VoiceRecognitionComponentProps> = ({ o
                                     </Table.Td>
                                     <Table.Td>
                                         <ActionIcon onClick={() => handleEdit(index)} className="mr-2">
-                                            <IconPencil size={18} />
+                                            <IconPencil size={18}/>
                                         </ActionIcon>
                                         <ActionIcon onClick={() => handleDelete(index)} color="red">
-                                            <IconTrash size={18} />
+                                            <IconTrash size={18}/>
                                         </ActionIcon>
                                     </Table.Td>
                                 </Table.Tr>
