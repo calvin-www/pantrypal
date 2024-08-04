@@ -293,7 +293,7 @@ function Home() {
             },
           }}
       >
-        <VoiceRecognitionComponent onClose={closeVoiceRecognition} />
+        <VoiceRecognitionComponent onClose={closeVoiceRecognition}/>
       </Modal>
     </div>
   );

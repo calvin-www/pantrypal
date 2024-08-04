@@ -14,8 +14,10 @@ interface Operation {
         categories: { name: string; color: string }[];
     };
 }
-
-const VoiceRecognitionComponent: React.FC = () => {
+interface VoiceRecognitionComponentProps {
+    onClose: () => void;
+}
+const VoiceRecognitionComponent: React.FC<VoiceRecognitionComponentProps> = ({ onClose }) => {
     const { transcript, listening, resetTranscript } = useSpeechRecognition();
     const [isListening, setIsListening] = useState(false);
     const [isInterpreting, setIsInterpreting] = useState(false);
@@ -111,12 +113,14 @@ const VoiceRecognitionComponent: React.FC = () => {
             console.log('Operations confirmed and database updated');
             setOperations([]);
             resetTranscript();
+            onClose();
         } catch (error) {
             console.error('Error updating database:', error);
         } finally {
             setIsLoading(false);
         }
     };
+
 
     return (
         <div>
@@ -190,7 +194,7 @@ const VoiceRecognitionComponent: React.FC = () => {
                     isModalOpen={editModalOpen}
                     setIsModalOpen={setEditModalOpen}
                     onSave={handleSave}
-                    existingCategories={[]} // You might want to pass existing categories if available
+                    existingCategories={[]}
                 />
             )}
         </div>
