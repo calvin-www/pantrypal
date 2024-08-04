@@ -5,7 +5,6 @@ import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognitio
 import EditModal from "./EditModal";
 import { db } from '../firebase';
 import { doc, addDoc, updateDoc, deleteDoc, collection, getDocs , getDoc, query } from 'firebase/firestore';
-import { Item } from '../types/item';
 
 interface Operation {
     type: 'add' | 'delete' | 'edit';
@@ -207,10 +206,19 @@ const VoiceRecognitionComponent: React.FC<VoiceRecognitionComponentProps> = ({ o
                                                    handleEdit,
                                                    handleDelete,
                                                    databaseItems
-                                               }) => {        const [comboboxValue, setComboboxValue] = useState(op.item.name);
+                                               }) => {
+        const [comboboxValue, setComboboxValue] = useState(op.item.name);
         const combobox = useCombobox({
             onDropdownClose: () => combobox.resetSelectedOption(),
         });
+        const filterSimilarItems = (items: { id: string; name: string }[], query: string) => {
+            return items.filter(item =>
+                item.name.toLowerCase().includes(query.toLowerCase())
+            );
+        };
+
+        // Check if item already exists
+        const itemExists = databaseItems.some(item => item.name.toLowerCase() === comboboxValue.toLowerCase());
 
         return (
             <Table.Tr>
@@ -249,17 +257,16 @@ const VoiceRecognitionComponent: React.FC<VoiceRecognitionComponentProps> = ({ o
 
                         <Combobox.Dropdown>
                             <Combobox.Options>
-                                {databaseItems.map((item) => (
+                                {filterSimilarItems(databaseItems, comboboxValue).map((item) => (
                                     <Combobox.Option value={item.name} key={item.id}>
                                         {item.name}
                                     </Combobox.Option>
                                 ))}
-                                <Combobox.Option
-                                    value={comboboxValue}
-                                    disabled={databaseItems.some((item: { name: string }) => item.name === comboboxValue)}
-                                    >
-                                    + Create {comboboxValue}
-                            </Combobox.Option>
+                                {!itemExists && (
+                                    <Combobox.Option value={comboboxValue}>
+                                        + Create {comboboxValue}
+                                    </Combobox.Option>
+                                )}
                         </Combobox.Options>
                     </Combobox.Dropdown>
                 </Combobox>
