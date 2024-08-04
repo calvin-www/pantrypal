@@ -19,7 +19,7 @@ import { collection, onSnapshot, addDoc } from "firebase/firestore";
 import { IconCamera,IconMicrophone } from "@tabler/icons-react";
 import "regenerator-runtime/runtime";
 import { db } from '../firebase';
-import VoiceRecognitionComponent from '../components/VoiceRecognitionComponent';
+// import VoiceRecognitionComponent from '../components/VoiceRecognitionComponent';
 import { Analytics } from '@vercel/analytics/react';
 
 
@@ -295,7 +295,7 @@ function Home() {
             },
           }}
       >
-        <VoiceRecognitionComponent onClose={closeVoiceRecognition}/>
+        {/*<VoiceRecognitionComponent onClose={closeVoiceRecognition}/>*/}
       </Modal>
     </div>
   );
