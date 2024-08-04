@@ -5,10 +5,12 @@ import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognitio
 import EditModal from "./EditModal";
 import { db } from '../firebase';
 import { doc, addDoc, updateDoc, deleteDoc, collection, getDocs, query , where, Firestore } from 'firebase/firestore';
+import { Item } from '../types/item';
 
 interface Operation {
     type: 'add' | 'delete' | 'edit';
     item: {
+        id?: string;  // Add this line
         name: string;
         amount: string;
         categories: { name: string; color: string }[];
@@ -30,7 +32,9 @@ const VoiceRecognitionComponent: React.FC<VoiceRecognitionComponentProps> = ({ o
     const [editingItem, setEditingItem] = useState<Operation | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const { transcript, resetTranscript, browserSupportsSpeechRecognition } = useSpeechRecognition();
-
+    const [itemsToDelete, setItemsToDelete] = useState<any[]>([]);
+    const [itemsToEdit, setItemsToEdit] = useState<any[]>([]);
+    
     useEffect(() => {
         if (!browserSupportsSpeechRecognition) {
             console.error("Browser doesn't support speech recognition.");
@@ -104,10 +108,33 @@ const handleOperationTypeChange = (index: number, value: 'add' | 'delete' | 'edi
 
 
 
-    const handleEdit = (index: number) => {
-        setEditingItem(operations[index]);
-        setEditModalOpen(true);
-    };
+const handleEdit = async (index: number) => {
+    setIsLoading(true);
+    try {
+        const itemName = operations[index].item.name;
+        const itemsRef = collection(db, 'items');
+        const q = query(itemsRef, where('name', '==', itemName));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            console.log('No matching items found');
+            return;
+        }
+
+        if (querySnapshot.size === 1) {
+            const docToEdit = querySnapshot.docs[0];
+            setEditingItem({ ...operations[index], item: { ...(docToEdit.data() as Item), id: docToEdit.id } });            setEditModalOpen(true);
+        } else {
+            const matchingItems = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setItemsToEdit(matchingItems);
+            setEditModalOpen(true);
+        }
+    } catch (error) {
+        console.error("Error fetching documents for edit: ", error);
+    } finally {
+        setIsLoading(false);
+    }
+};
     const handleSave = async (updatedItem: Operation["item"]): Promise<void> => {
         setOperations(currentOperations =>
             currentOperations.map((operation, idx) =>
@@ -119,11 +146,38 @@ const handleOperationTypeChange = (index: number, value: 'add' | 'delete' | 'edi
         setEditModalOpen(false);
     };
 
-    const handleDelete = (index: number) => {
-        const updatedOperations = operations.filter((_, i) => i !== index);
-        setOperations(updatedOperations);
-    };
+const handleDelete = async (index: number) => {
+    setIsLoading(true);
+    try {
+        const itemName = operations[index].item.name;
+        const itemsRef = collection(db, 'items');
+        const q = query(itemsRef, where('name', '==', itemName));
+        const querySnapshot = await getDocs(q);
 
+        if (querySnapshot.empty) {
+            console.log('No matching items found');
+            return;
+        }
+
+        if (querySnapshot.size === 1) {
+            const docToDelete = querySnapshot.docs[0];
+            await deleteDoc(doc(db, 'items', docToDelete.id));
+            console.log('Item deleted successfully');
+            
+            // Remove the deleted item from the operations array
+            const updatedOperations = operations.filter((_, i) => i !== index);
+            setOperations(updatedOperations);
+        } else {
+            const matchingItems = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setItemsToDelete(matchingItems);
+            setEditModalOpen(true);
+        }
+    } catch (error) {
+        console.error("Error deleting document: ", error);
+    } finally {
+        setIsLoading(false);
+    }
+};
 
 const handleConfirm = async () => {
     setIsLoading(true);
