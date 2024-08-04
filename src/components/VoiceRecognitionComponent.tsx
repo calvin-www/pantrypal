@@ -160,69 +160,64 @@ const VoiceRecognitionComponent: React.FC<VoiceRecognitionComponentProps> = ({
     setOperations((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleConfirm = async () => {
+const handleConfirm = async () => {
     setIsLoading(true);
     try {
-      for (const operation of operations) {
-        const { type, item } = operation;
-        const itemRef = databaseItems.find(
-          (dbItem) => dbItem.name === item.name,
-        );
+        for (const operation of operations) {
+            const { type, item } = operation;
+            const itemRef = databaseItems.find(dbItem => dbItem.name === item.name);
 
-        switch (type) {
-          case "add":
-            if (itemRef) {
-              const docRef = doc(db, "items", itemRef.id);
-              const docSnap = await getDoc(docRef);
-              if (docSnap.exists()) {
-                const existingItem = docSnap.data();
-                const newAmount =
-                  parseFloat(existingItem.amount) + parseFloat(item.amount);
-                await updateDoc(docRef, { amount: newAmount.toString() });
-              }
-            } else {
-              await addDoc(collection(db, "items"), item);
+            switch (type) {
+                case 'add':
+                    if (itemRef) {
+                        const docRef = doc(db, 'items', itemRef.id);
+                        const docSnap = await getDoc(docRef);
+                        if (docSnap.exists()) {
+                            const existingItem = docSnap.data();
+                            const newAmount = parseFloat(existingItem.amount) + parseFloat(item.amount);
+                            await updateDoc(docRef, { amount: newAmount.toString() });
+                        }
+                    } else {
+                        await addDoc(collection(db, 'items'), item);
+                    }
+                    break;
+                case 'edit':
+                    if (itemRef) {
+                        const docRef = doc(db, 'items', itemRef.id);
+                        await updateDoc(docRef, item);
+                    } else {
+                        console.error('Cannot edit item without a valid ID');
+                    }
+                    break;
+                case 'delete':
+                    if (itemRef) {
+                        const docRef = doc(db, 'items', itemRef.id);
+                        const docSnap = await getDoc(docRef);
+                        if (docSnap.exists()) {
+                            const existingItem = docSnap.data();
+                            const newAmount = parseFloat(existingItem.amount) - parseFloat(item.amount);
+                            if (newAmount <= 0) {
+                                await deleteDoc(docRef);
+                            } else {
+                                await updateDoc(docRef, { amount: newAmount.toString() });
+                            }
+                        }
+                    } else {
+                        console.error('Cannot delete item without a valid ID');
+                    }
+                    break;
+                default:
+                    console.error('Unknown operation type:', type);
             }
-            break;
-          case "edit":
-            if (itemRef) {
-              const docRef = doc(db, "items", itemRef.id);
-              await updateDoc(docRef, item);
-            } else {
-              console.error("Cannot edit item without a valid ID");
-            }
-            break;
-          case "delete":
-            if (itemRef) {
-              const docRef = doc(db, "items", itemRef.id);
-              const docSnap = await getDoc(docRef);
-              if (docSnap.exists()) {
-                const existingItem = docSnap.data();
-                const newAmount =
-                  parseFloat(existingItem.amount) - parseFloat(item.amount);
-                if (newAmount <= 0) {
-                  await deleteDoc(docRef);
-                } else {
-                  await updateDoc(docRef, { amount: newAmount.toString() });
-                }
-              }
-            } else {
-              console.error("Cannot delete item without a valid ID");
-            }
-            break;
-          default:
-            console.error("Unknown operation type:", type);
         }
-      }
-      console.log("Operations confirmed and database updated");
-      onClose();
+        console.log('Operations confirmed and database updated');
+        onClose();
     } catch (error) {
-      console.error("Error updating database:", error);
+        console.error('Error updating database:', error);
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
-  };
-  if (state === "listening") {
+};  if (state === "listening") {
     return (
       <div className="flex flex-col items-center space-y-4">
         <div className="flex items-center space-x-2">
