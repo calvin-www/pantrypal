@@ -47,38 +47,40 @@ const VoiceRecognitionComponent: React.FC<VoiceRecognitionComponentProps> = ({ o
     }, [browserSupportsSpeechRecognition]);
 
 
-    const handleInterpretTranscript = async () => {
-        if (transcript) {
-            try {
-                setIsInterpreting(true);
-                console.log('Sending transcript for interpretation...');
-                const response = await fetch('/api/interpretTranscript', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ transcript }),
-                });
+const handleInterpretTranscript = async () => {
+    if (transcript) {
+        try {
+            setIsInterpreting(true);
+            console.log('Sending transcript for interpretation...');
+            const response = await fetch('/api/interpretTranscript', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ transcript }),
+            });
 
-                if (!response.ok) {
-                    console.error('Failed to interpret transcript');
-                    return;
-                }
-
-                const data = await response.json();
-                console.log('Interpreted data:', data);
-                // Handle the interpreted data as needed
-                resetTranscript();
-                onClose();
-            } catch (error) {
-                console.error('Error interpreting transcript:', error);
-            } finally {
-                setIsInterpreting(false);
+            if (!response.ok) {
+                console.error('Failed to interpret transcript');
+                return;
             }
-        } else {
-            console.log('No transcript to interpret');
+
+            const data = await response.json();
+            console.log('Interpreted data:', data);
+            
+            // Update the operations state with the interpreted data
+            setOperations(data.operations || []);
+            
+            resetTranscript();
+        } catch (error) {
+            console.error('Error interpreting transcript:', error);
+        } finally {
+            setIsInterpreting(false);
         }
-    };
+    } else {
+        console.log('No transcript to interpret');
+    }
+};
 
     const handleOperationTypeChange = (index: number, value: 'add' | 'delete' | 'edit') => {
         const updatedOperations = [...operations];
