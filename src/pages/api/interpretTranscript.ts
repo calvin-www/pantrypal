@@ -18,7 +18,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const text = await response.text();
 
       console.log('Raw Gemini response:', text);
-      res.status(200).json({ interpretedOperations: text });
+
+      // Clean and parse the response
+      const cleanedJson = text.replace(/```json\n|\n```/g, '').trim();
+      const parsedOperations = JSON.parse(cleanedJson);
+
+      res.status(200).json({ interpretedOperations: parsedOperations });
     } catch (error) {
       console.error('Error interpreting transcript:', error);
       res.status(500).json({ error: 'Error interpreting transcript' });

@@ -33,43 +33,43 @@ const VoiceRecognitionComponent: React.FC<VoiceRecognitionComponentProps> = ({ o
         };
     }, [browserSupportsSpeechRecognition]);
 
-    const handleInterpretTranscript = async () => {
-        if (transcript) {
-            try {
-                setIsInterpreting(true);
-                console.log('Sending transcript for interpretation...');
-                const response = await fetch('/api/interpretTranscript', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ transcript }),
-                });
+const handleInterpretTranscript = async () => {
+    if (transcript) {
+        try {
+            setIsInterpreting(true);
+            SpeechRecognition.stopListening();
+            setIsListening(false);
+            console.log('Sending transcript for interpretation...');
+            const response = await fetch('/api/interpretTranscript', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ transcript }),
+            });
 
-                if (!response.ok) {
-                    console.error('Failed to interpret transcript');
-                    return;
-                }
-
-                const data = await response.json();
-                console.log('Interpreted data:', data);
-                if (data.interpretedOperations) {
-                    console.log('Interpreted operations:', data.interpretedOperations);
-                    setOperations(JSON.parse(data.interpretedOperations));
-                    setShowConfirmation(true);
-                } else {
-                    console.error('No valid content in the response');
-                }
-            } catch (error) {
-                console.error('Error interpreting transcript:', error);
-            } finally {
-                setIsInterpreting(false);
+            if (!response.ok) {
+                console.error('Failed to interpret transcript');
+                return;
             }
-        } else {
-            console.log('No transcript to interpret');
-        }
-    };
 
+            const data = await response.json();
+            console.log('Interpreted data:', data);
+            if (data.interpretedOperations) {
+                setOperations(data.interpretedOperations);
+                setShowConfirmation(true);
+            } else {
+                console.error('No valid content in the response');
+            }
+        } catch (error) {
+            console.error('Error interpreting transcript:', error);
+        } finally {
+            setIsInterpreting(false);
+        }
+    } else {
+        console.log('No transcript to interpret');
+    }
+};
     return (
         <div className="flex flex-col items-center space-y-4">
             {!browserSupportsSpeechRecognition ? (
