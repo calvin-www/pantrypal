@@ -33,9 +33,9 @@ import {
 } from "../utils/categoryColorutils";
 
 const CameraComponent = ({
-  onImageCapture,
-  onClose,
-}: {
+                           onImageCapture,
+                           onClose,
+                         }: {
   onImageCapture: (url: string) => void;
   onClose: () => void;
 }) => {
@@ -149,51 +149,51 @@ const CameraComponent = ({
       console.log("recognized items:", data.recognizedItems);
 
       let localCategories = JSON.parse(
-        localStorage.getItem("categories") || "[]",
+          localStorage.getItem("categories") || "[]",
       );
       const categoryColorMap: Map<string, string> = new Map(
-        localCategories.map((cat: { name: string; color: string }) => [
-          cat.name,
-          cat.color,
-        ]),
+          localCategories.map((cat: { name: string; color: string }) => [
+            cat.name,
+            cat.color,
+          ]),
       );
 
       const itemsArray = Array.isArray(data.recognizedItems)
-        ? data.recognizedItems
-        : data.recognizedItems.split("\n").filter(Boolean);
+          ? data.recognizedItems
+          : data.recognizedItems.split("\n").filter(Boolean);
 
       const parsedItems = itemsArray
-        .map((item: any) => {
-          let parsedItem;
-          try {
-            parsedItem = typeof item === "string" ? JSON.parse(item) : item;
-          } catch (e) {
-            console.error("Error parsing item:", item);
-            return null;
-          }
+          .map((item: any) => {
+            let parsedItem;
+            try {
+              parsedItem = typeof item === "string" ? JSON.parse(item) : item;
+            } catch (e) {
+              console.error("Error parsing item:", item);
+              return null;
+            }
 
-          const categories = (parsedItem.categories || []).map(
-            (category: string) => {
-              if (!categoryColorMap.has(category)) {
-                const color = getColorForCategory(category, categoryColorMap);
-                const newCategory = { name: category, color };
-                localCategories.push(newCategory);
-                categoryColorMap.set(category, color);
-              }
-              return { name: category, color: categoryColorMap.get(category)! };
-            },
-          );
+            const categories = (parsedItem.categories || []).map(
+                (category: string) => {
+                  if (!categoryColorMap.has(category)) {
+                    const color = getColorForCategory(category, categoryColorMap);
+                    const newCategory = { name: category, color };
+                    localCategories.push(newCategory);
+                    categoryColorMap.set(category, color);
+                  }
+                  return { name: category, color: categoryColorMap.get(category)! };
+                },
+            );
 
-          return {
-            name: parsedItem.name || "",
-            amount: parsedItem.amount || "",
-            categories: categories,
-            createdAt: new Date().toISOString(),
-          };
-        })
-        .filter(Boolean);
-        localStorage.setItem('categories', JSON.stringify(localCategories));
-        await syncCategoriesToFirebase(localCategories);
+            return {
+              name: parsedItem.name || "",
+              amount: parsedItem.amount || "",
+              categories: categories,
+              createdAt: new Date().toISOString(),
+            };
+          })
+          .filter(Boolean);
+      localStorage.setItem('categories', JSON.stringify(localCategories));
+      await syncCategoriesToFirebase(localCategories);
 
       console.log("Raw AI output:", data);
       console.log("Parsed recognized items:", parsedItems);
@@ -208,7 +208,7 @@ const CameraComponent = ({
     console.log("Starting confirm and upload with items:", confirmedItems);
     try {
       const validItems = confirmedItems.filter(
-        (item) => item && item.name !== "",
+          (item) => item && item.name !== "",
       );
       console.log("Valid items:", validItems);
       for (const item of validItems) {
@@ -244,111 +244,111 @@ const CameraComponent = ({
   const errorMessages = {
     noCameraAccessible: "No camera device accessible",
     permissionDenied:
-      "Permission denied. Please refresh and give camera permission.",
+        "Permission denied. Please refresh and give camera permission.",
     switchCamera:
-      "It is not possible to switch camera to different one because there is only one video device accessible.",
+        "It is not possible to switch camera to different one because there is only one video device accessible.",
     canvas: "Canvas is not supported.",
   };
 
   return (
-    <div className="flex flex-col h-full">
-      {!image ? (
-        <div
-          style={{
-            position: "relative",
-            width: "100%",
-            height: "calc(100vh - 2rem)",
-          }}
+      <div className="flex flex-col h-full">
+        {!image ? (
+            <div
+                style={{
+                  position: "relative",
+                  width: "100%",
+                  height: "calc(100vh - 2rem)",
+                }}
+            >
+              <Camera
+                  ref={camera}
+                  errorMessages={errorMessages}
+                  aspectRatio="cover"
+                  numberOfCamerasCallback={setNumberOfCameras}
+              />
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex justify-center items-center space-x-4 z-10">
+                <ActionIcon
+                    size="xl"
+                    radius="xl"
+                    variant="filled"
+                    color="green"
+                    onClick={handleUploadPhoto}
+                >
+                  <IconUpload size={24} />
+                </ActionIcon>
+                <ActionIcon
+                    size="5xl"
+                    radius="xl"
+                    variant="filled"
+                    color="blue"
+                    onClick={takePhoto}
+                >
+                  <IconCamera size={48} />
+                </ActionIcon>
+                {numberOfCameras > 1 && (
+                    <ActionIcon
+                        size="xl"
+                        radius="xl"
+                        variant="filled"
+                        color="blue"
+                        onClick={switchCamera}
+                    >
+                      <IconCameraRotate size={24} />
+                    </ActionIcon>
+                )}
+              </div>
+            </div>
+        ) : (
+            <Paper
+                shadow="lg"
+                radius="lg"
+                className="m-4 p-4 bg-[#242424] border-2 border-[#3b3b3b] relative"
+            >
+              <Image
+                  src={image}
+                  alt="Taken photo"
+                  layout="responsive"
+                  width={16}
+                  height={9}
+              />
+              <div className="absolute top-4 left-4">
+                <ActionIcon
+                    size="xl"
+                    radius="xl"
+                    variant="filled"
+                    color="red"
+                    onClick={deleteImage}
+                >
+                  <IconArrowBack size={32} />
+                </ActionIcon>
+              </div>
+              <div className="absolute top-4 right-4">
+                <ActionIcon
+                    size="xl"
+                    radius="xl"
+                    variant="filled"
+                    color="green"
+                    onClick={saveImage}
+                    loading={isLoading}
+                >
+                  {!isLoading && <IconArrowRight size={32} />}
+                </ActionIcon>
+              </div>
+            </Paper>
+        )}
+        <Modal
+            opened={showConfirmationTable}
+            onClose={() => setShowConfirmationTable(false)}
+            size="xl"
+            title="Confirm Recognized Items"
         >
-          <Camera
-            ref={camera}
-            errorMessages={errorMessages}
-            aspectRatio="cover"
-            numberOfCamerasCallback={setNumberOfCameras}
+          <RecognizedItemsTable
+              items={recognizedItems}
+              onConfirm={handleConfirmAndUpload}
+              onCancel={() => setShowConfirmationTable(false)}
           />
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex justify-center items-center space-x-4 z-10">
-            <ActionIcon
-              size="xl"
-              radius="xl"
-              variant="filled"
-              color="green"
-              onClick={handleUploadPhoto}
-            >
-              <IconUpload size={24} />
-            </ActionIcon>
-            <ActionIcon
-              size="5xl"
-              radius="xl"
-              variant="filled"
-              color="blue"
-              onClick={takePhoto}
-            >
-              <IconCamera size={48} />
-            </ActionIcon>
-            {numberOfCameras > 1 && (
-              <ActionIcon
-                size="xl"
-                radius="xl"
-                variant="filled"
-                color="blue"
-                onClick={switchCamera}
-              >
-                <IconCameraRotate size={24} />
-              </ActionIcon>
-            )}
-          </div>
-        </div>
-      ) : (
-        <Paper
-          shadow="lg"
-          radius="lg"
-          className="m-4 p-4 bg-[#242424] border-2 border-[#3b3b3b] relative"
-        >
-          <Image
-            src={image}
-            alt="Taken photo"
-            layout="responsive"
-            width={16}
-            height={9}
-          />
-          <div className="absolute top-4 left-4">
-            <ActionIcon
-              size="xl"
-              radius="xl"
-              variant="filled"
-              color="red"
-              onClick={deleteImage}
-            >
-              <IconArrowBack size={32} />
-            </ActionIcon>
-          </div>
-          <div className="absolute top-4 right-4">
-            <ActionIcon
-              size="xl"
-              radius="xl"
-              variant="filled"
-              color="green"
-              onClick={saveImage}
-              loading={isLoading}
-            >
-              {!isLoading && <IconArrowRight size={32} />}
-            </ActionIcon>
-          </div>
-        </Paper>
-      )}
-      <Modal
-        opened={showConfirmationTable}
-        onClose={() => setShowConfirmationTable(false)}
-        size="xl"
-        title="Confirm Recognized Items"
-      >
-        <RecognizedItemsTable
-          items={recognizedItems}
-          onConfirm={handleConfirmAndUpload}
-          onCancel={() => setShowConfirmationTable(false)}
-        />
-      </Modal>
-    </div>
+        </Modal>
+      </div>
   );
 };
 
