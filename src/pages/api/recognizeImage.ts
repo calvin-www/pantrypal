@@ -2,10 +2,12 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { GoogleGenerativeAI, Part } from "@google/generative-ai";
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase';
+import sharp from 'sharp';
+
 // Initialize the Gemini model
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-export const maxDuration = 20
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).end();
@@ -18,11 +20,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const imageResponse = await fetch(imageUrl);
     const imageData = await imageResponse.arrayBuffer();
 
-    // Create a part for the image
+    const compressedImageBuffer = await sharp(Buffer.from(imageData))
+        .resize({ width: 1024, height: 1024, fit: 'inside' })
+        .jpeg({ quality: 85 })
+        .toBuffer();
+
     const imagePart: Part = {
       inlineData: {
-        data: Buffer.from(imageData).toString('base64'),
-        mimeType: imageResponse.headers.get('content-type') || 'image/jpeg',
+        data: compressedImageBuffer.toString('base64'),
+        mimeType: 'image/jpeg',
       },
     };
 
@@ -30,8 +36,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const categories = categoriesSnapshot.docs.map(doc => doc.data());
     const categoryNames = categories.map((cat: any) => cat.name).join(', ');
     // Generate content based on the image and categories
-    const result = await model.generateContent([
-      `Analyze the image and identify food items. For each item, provide:
+//     const result = await model.generateContent([
+//       `Analyze the image and identify food items. For each item, provide:
+// 1. Name of the item
+// 2. Estimated quantity as a number (no units)
+// 3. Applicable categories from this list: ${categoryNames}, if none are applicable generate new ones.
+//
+// Format each item as a valid JSON object on a single line:
+// {"name": "item name", "amount": number, "categories": ["category1", "category2"]}
+//
+// Return a list of these JSON objects, one per line, with no additional text or explanation.
+// Example:
+// {"name": "banana", "amount": 2, "categories": ["fruits", "fresh"]}
+// `,
+//       imagePart,
+//     ]);
+
+const result = await model.generateContentStream([
+  `Analyze the image and identify food items. For each item, provide:
 1. Name of the item
 2. Estimated quantity as a number (no units)
 3. Applicable categories from this list: ${categoryNames}, if none are applicable generate new ones.
@@ -40,27 +62,26 @@ Format each item as a valid JSON object on a single line:
 {"name": "item name", "amount": number, "categories": ["category1", "category2"]}
 
 Return a list of these JSON objects, one per line, with no additional text or explanation.
-Examples:
+Example:
 {"name": "banana", "amount": 2, "categories": ["fruits", "fresh"]}
-{"name": "orange", "amount": 1, "categories": ["fruits", "fresh"]}
-{"name": "apple", "amount": 3, "categories": ["fruits", "fresh"]}
-{"name": "bread", "amount": 1, "categories": ["bakery", "grains"]}`,
-      imagePart,
-    ]);
+`,
+  imagePart,
+]);
 
-    const generatedResponse = await result.response;
-    const text = await generatedResponse.text();
-
-// Parse the text response into a structured format
-    const recognizedItems = text.split('\n').map((line: string) => {
+let recognizedItems = [];
+for await (const chunk of result.stream) {
+  const chunkText = await chunk.text();
+  const items = chunkText.split('\n')
+    .map(line => {
       try {
         return JSON.parse(line);
       } catch (error) {
-        console.error("Error parsing line:", line);
         return null;
       }
-    }).filter(item => item !== null);
-
+    })
+    .filter(item => item !== null);
+  recognizedItems.push(...items);
+}
     res.status(200).json({ recognizedItems });
   } catch (error) {
     console.error("Error recognizing items in image:", error);
