@@ -14,6 +14,11 @@ interface Operation {
         categories: { name: string; color: string }[];
     };
 }
+interface InterpretedOperation {
+    operation: 'add' | 'delete' | 'edit';
+    item: string;
+    quantity: number;
+}
 interface VoiceRecognitionComponentProps {
     onClose: () => void;
 }
@@ -68,8 +73,18 @@ const handleInterpretTranscript = async () => {
             const data = await response.json();
             console.log('Interpreted data:', data);
             
-            // Update the operations state with the interpreted data
-            setOperations(data.operations || []);
+            // Transform the interpretedOperations to match the expected format
+            const transformedOperations = data.interpretedOperations.map((op: InterpretedOperation) => ({
+                type: op.operation,
+                item: {
+                    name: op.item,
+                    amount: op.quantity.toString(),
+                    categories: []
+                }
+            }));
+            
+            // Update the operations state with the transformed data
+            setOperations(transformedOperations);
             
             resetTranscript();
         } catch (error) {
@@ -81,8 +96,7 @@ const handleInterpretTranscript = async () => {
         console.log('No transcript to interpret');
     }
 };
-
-    const handleOperationTypeChange = (index: number, value: 'add' | 'delete' | 'edit') => {
+const handleOperationTypeChange = (index: number, value: 'add' | 'delete' | 'edit') => {
         const updatedOperations = [...operations];
         updatedOperations[index].type = value;
         setOperations(updatedOperations);
