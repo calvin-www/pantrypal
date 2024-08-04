@@ -2,7 +2,10 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { GoogleGenerativeAI, Part } from "@google/generative-ai";
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase';
+import NodeCache from 'node-cache';
+import sharp from 'sharp';
 
+const cache = new NodeCache({ stdTTL: 3600 }); // Cache for 1 hour
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
@@ -15,16 +18,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const [imageData, categories] = await Promise.all([
-      fetchImageData(imageUrl),
-      fetchCategories()
+      fetchAndProcessImageData(imageUrl),
+      getCachedCategories()
     ]);
 
     const imagePart: Part = createImagePart(imageData);
     const prompt = generatePrompt(categories);
-    
-    const result = await model.generateContent([prompt, imagePart]);
-    const text = await result.response.text();
 
+    const result = await Promise.race([
+      model.generateContent([prompt, imagePart]),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('API Timeout')), 30000))
+    ]);
+
+    const text = await (result as any).response.text();
     const recognizedItems = parseResponse(text);
 
     res.status(200).json({ recognizedItems });
@@ -33,17 +39,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.status(500).json({ error: 'Failed to process image' });
   }
 }
+async function getCachedCategories(): Promise<string> {
+  if (typeof window !== 'undefined') {
+    const localCategories = localStorage.getItem('categories');
+    if (localCategories) {
+      return JSON.parse(localCategories).map((cat: any) => cat.name).join(', ');
+    }
+  }
 
-async function fetchImageData(imageUrl: string): Promise<ArrayBuffer> {
-  const response = await fetch(imageUrl);
-  return response.arrayBuffer();
-}
-
-async function fetchCategories(): Promise<string> {
   const categoriesSnapshot = await getDocs(collection(db, 'categories'));
-  const categories = categoriesSnapshot.docs.map(doc => doc.data().name);
-  return categories.join(', ');
+  const categories = categoriesSnapshot.docs.map(doc => doc.data().name).join(', ');
+  return categories;
 }
+async function fetchAndProcessImageData(imageUrl: string): Promise<Buffer> {
+  const response = await fetch(imageUrl);
+  const arrayBuffer = await response.arrayBuffer();
+  return sharp(Buffer.from(arrayBuffer))
+      .resize(800) // Resize to max width of 800px
+      .jpeg({ quality: 80 }) // Compress as JPEG
+      .toBuffer();
+}
+
+// async function fetchCategories(): Promise<string> {
+//   const categoriesSnapshot = await getDocs(collection(db, 'categories'));
+//   const categories = categoriesSnapshot.docs.map(doc => doc.data().name);
+//   return categories.join(', ');
+// }
 
 function createImagePart(imageData: ArrayBuffer): Part {
   return {
@@ -55,17 +76,13 @@ function createImagePart(imageData: ArrayBuffer): Part {
 }
 
 function generatePrompt(categories: string): string {
-  return `Analyze the image and identify food items. For each item, provide:
-1. Name of the item
-2. Estimated quantity as a number (no units)
-3. Applicable categories from this list: ${categories}, if none are applicable generate new ones.
+  return `Identify food items in the image. For each:
+- Name
+- Estimated quantity (number only)
+- Categories from: ${categories} (or new if none fit)
 
-Format each item as a valid JSON object on a single line:
-{"name": "item name", "amount": number, "categories": ["category1", "category2"]}
-
-Return a list of these JSON objects, one per line, with no additional text or explanation.
-Examples:
-{"name": "banana", "amount": 2, "categories": ["fruits", "fresh"]}`;
+Format: {"name": "item", "amount": number, "categories": ["category1", "category2"]}
+One JSON object per line, no extra text.`;
 }
 
 function parseResponse(text: string): any[] {
