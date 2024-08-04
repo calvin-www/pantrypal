@@ -51,6 +51,7 @@ async function getCachedCategories(): Promise<string> {
   const categories = categoriesSnapshot.docs.map(doc => doc.data().name).join(', ');
   return categories;
 }
+
 async function fetchAndProcessImageData(imageUrl: string): Promise<Buffer> {
   const response = await fetch(imageUrl);
   const arrayBuffer = await response.arrayBuffer();
@@ -74,7 +75,7 @@ function generatePrompt(categories: string): string {
   return `Identify food items in the image. For each:
 - Name
 - Estimated quantity (number only)
-- Categories from: ${categories} (or new if none fit)
+- Categories from: ${categories} (if none fit, generate new categories)
 
 Format: {"name": "item", "amount": number, "categories": ["category1", "category2"]}
 One JSON object per line, no extra text.`;
