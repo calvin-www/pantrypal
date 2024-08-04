@@ -10,13 +10,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('Received transcript:', transcript);
     try {
       console.log('Sending transcript to Gemini...');
-      const result = await model.generateContent(
-        `Interpret the following voice command for a pantry tracking app and return a JSON array of operations. 
-        Return ONLY the JSON array without any explanations or additional text.
-        Format: [{"operation": "add|update|delete", "item": "item name", "quantity": number}]
-        Voice command: "${transcript}"`
-      );
+      const prompt = `
+Interpret the following transcript and extract operations (add, remove, or edit) for a pantry inventory system:
+"${transcript}"
 
+For each operation, provide:
+- operation: "add", "remove", or "edit"
+- item: name of the item
+- quantity: number (positive for add, negative for remove)
+
+Example output:
+[
+  {"operation": "add", "item": "apples", "quantity": 5},
+  {"operation": "remove", "item": "bananas", "quantity": 2},
+  {"operation": "edit", "item": "milk", "quantity": 1}
+]
+`;
+
+      const result = await model.generateContent(prompt);
       const response = await result.response;
       const text = await response.text();
 
