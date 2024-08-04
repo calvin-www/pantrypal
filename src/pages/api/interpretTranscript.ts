@@ -11,7 +11,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       console.log('Sending transcript to Gemini...');
       const result = await model.generateContent(
-          `Interpret the following voice command for a pantry tracking app and return a JSON array of operations: "${transcript}"`
+          `Interpret the following voice command for a pantry tracking app and return a JSON array of operations. 
+          Consider 'edit' and 'update' as the same operation, and 'remove' and 'delete' as the same operation. 
+          For remove/delete operations, treat them as updates with a reduced quantity. If the quantity becomes 0 or negative, mark it for deletion.
+          Return the operations in this format: 
+          [{"operation": "add|update|delete", "item": "item name", "quantity": number}]
+          Voice command: "${transcript}"`
       );
 
       const response = await result.response;
