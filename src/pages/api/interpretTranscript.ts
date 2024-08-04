@@ -1,5 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { generativeModel } from '../../utils/vertexAI';
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'POST') {
@@ -7,19 +10,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('Received transcript:', transcript);
     try {
       console.log('Sending transcript to Gemini...');
-      const result = await generativeModel.generateContent(
-        `Interpret the following voice command for a pantry tracking app and return a JSON array of operations: "${transcript}"`
+      const result = await model.generateContent(
+          `Interpret the following voice command for a pantry tracking app and return a JSON array of operations: "${transcript}"`
       );
 
-      console.log('Received response from Gemini');
-      if (result.response?.candidates?.[0]?.content) {
-        const content = result.response.candidates[0].content;
-        console.log('Raw Gemini response:', content);
-        res.status(200).json({ rawResponse: content });
-      } else {
-        console.error('No valid content in the response');
-        res.status(400).json({ error: 'No valid content in the response' });
-      }
+      const response = await result.response;
+      const text = await response.text();
+
+      console.log('Raw Gemini response:', text);
+      res.status(200).json({ interpretedOperations: text });
     } catch (error) {
       console.error('Error interpreting transcript:', error);
       res.status(500).json({ error: 'Error interpreting transcript' });

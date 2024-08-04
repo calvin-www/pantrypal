@@ -9,6 +9,8 @@ interface VoiceRecognitionComponentProps {
 const VoiceRecognitionComponent: React.FC<VoiceRecognitionComponentProps> = ({ onClose }) => {
     const [isListening, setIsListening] = useState(true);
     const [isInterpreting, setIsInterpreting] = useState(false);
+    const [operations, setOperations] = useState<any[]>([]); // Add this line
+    const [showConfirmation, setShowConfirmation] = useState(false); // Add this line
     const { transcript, resetTranscript, browserSupportsSpeechRecognition } = useSpeechRecognition();
 
     useEffect(() => {
@@ -51,9 +53,13 @@ const VoiceRecognitionComponent: React.FC<VoiceRecognitionComponentProps> = ({ o
 
                 const data = await response.json();
                 console.log('Interpreted data:', data);
-                // Handle the interpreted data as needed
-                resetTranscript();
-                onClose();
+                if (data.interpretedOperations) {
+                    console.log('Interpreted operations:', data.interpretedOperations);
+                    setOperations(JSON.parse(data.interpretedOperations));
+                    setShowConfirmation(true);
+                } else {
+                    console.error('No valid content in the response');
+                }
             } catch (error) {
                 console.error('Error interpreting transcript:', error);
             } finally {
@@ -80,6 +86,11 @@ const VoiceRecognitionComponent: React.FC<VoiceRecognitionComponentProps> = ({ o
             <Button onClick={handleInterpretTranscript} disabled={!transcript || isInterpreting}>
                 {isInterpreting ? 'Interpreting...' : 'Interpret Transcript'}
             </Button>
+            {showConfirmation && (
+                <div className="confirmation-message">
+                    Interpretation complete! {operations.length} operations found.
+                </div>
+            )}
         </div>
     );
 };

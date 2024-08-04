@@ -50,7 +50,7 @@ export async function processDataForVertexAI(images: string[], transcripts: stri
         transcripts: transcripts
     };
 }
-
+const vertexAI = new VertexAI({project: 'expense-tracker-a8458', location: 'us-central1'});
 export async function sendToVertexAI(data: ProcessedData): Promise<any> {
     try {
         const vertexAI = new VertexAI({project: 'expense-tracker-a8458', location: 'us-central1'});
@@ -86,5 +86,4 @@ export async function analyzeItemsWithVertexAI(): Promise<any> {
     }
 }
 
-export const generativeModel = new VertexAI({project: 'expense-tracker-a8458', location: 'us-central1'})
-    .preview.getGenerativeModel({model: 'gemini-1.5-flash'});
+export const generativeModel = vertexAI.preview.getGenerativeModel({model: 'gemini-1.5-flash'});
