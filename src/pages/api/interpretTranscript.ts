@@ -7,18 +7,10 @@ const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'POST') {
     const { transcript } = req.body;
-    console.log('Received transcript:', transcript);
     try {
-      console.log('Sending transcript to Gemini...');
       const result = await model.generateContent(
-          `Interpret the following voice command for a pantry tracking app and return a JSON array of operations. 
-          Consider 'edit' and 'update' as the same operation, and 'remove' and 'delete' as the same operation. 
-          For remove/delete operations, treat them as updates with a reduced quantity. If the quantity becomes 0 or negative, mark it for deletion.
-          Return the operations in this format: 
-          [{"operation": "add|update|delete", "item": "item name", "quantity": number}]
-          Voice command: "${transcript}"`
+        `Interpret the following voice command for a pantry tracking app and return a JSON array of operations: "${transcript}"`
       );
-
       const response = await result.response;
       const text = await response.text();
 
@@ -26,9 +18,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // Clean and parse the response
       const cleanedJson = text.replace(/```json\n|\n```/g, '').trim();
-      const parsedOperations = JSON.parse(cleanedJson);
+      let interpretedOperations;
+      try {
+        interpretedOperations = JSON.parse(cleanedJson);
+      } catch (parseError) {
+        console.error('Error parsing JSON:', parseError);
+        res.status(400).json({ error: 'Failed to parse response as JSON' });
+        return;
+      }
 
-      res.status(200).json({ interpretedOperations: parsedOperations });
+      res.status(200).json({ interpretedOperations });
     } catch (error) {
       console.error('Error interpreting transcript:', error);
       res.status(500).json({ error: 'Error interpreting transcript' });
