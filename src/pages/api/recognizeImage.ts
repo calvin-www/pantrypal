@@ -60,11 +60,6 @@ async function fetchAndProcessImageData(imageUrl: string): Promise<Buffer> {
       .toBuffer();
 }
 
-// async function fetchCategories(): Promise<string> {
-//   const categoriesSnapshot = await getDocs(collection(db, 'categories'));
-//   const categories = categoriesSnapshot.docs.map(doc => doc.data().name);
-//   return categories.join(', ');
-// }
 
 function createImagePart(imageData: ArrayBuffer): Part {
   return {

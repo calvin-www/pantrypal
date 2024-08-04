@@ -74,14 +74,14 @@ const handleInterpretTranscript = async () => {
             console.log('Interpreted data:', data);
 
             // Transform the interpretedOperations to match the expected format
-            const transformedOperations = data.interpretedOperations.map((op: InterpretedOperation) => ({
-                type: op.operation,
-                item: {
-                    name: op.item,
-                    amount: op.quantity.toString(),
-                    categories: []
-                }
-            }));
+const transformedOperations = data.interpretedOperations.map((op: InterpretedOperation) => ({
+    type: op.operation,
+    item: {
+        name: op.item,
+        amount: op.quantity ? op.quantity.toString() : '0',
+        categories: []
+    }
+}));
 
             // Update the operations state with the transformed data
             setOperations(transformedOperations);
